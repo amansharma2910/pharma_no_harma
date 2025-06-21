@@ -12,7 +12,7 @@ from datetime import datetime, date
 
 # Import all the models from the schema file
 from app.models.schemas import (
-    UserCreate, UserUpdate, UserResponse, UserType, UserListResponse,
+    ShareType, UserCreate, UserUpdate, UserResponse, UserType, UserListResponse,
     HealthRecordCreate, HealthRecordUpdate, HealthRecordResponse, HealthRecordStatus, HealthRecordListResponse,
     FileResponse as FileResponseSchema, FileUpdate, FileListResponse, FileType, FileCategory, FileStatus,
     AppointmentCreate, Medication, MedicationCreate, MedicationApproval, MedicationStatus,
