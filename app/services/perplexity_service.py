@@ -34,7 +34,9 @@ class PerplexityService:
             
             # Create a comprehensive prompt for medicine information
             prompt = f"""
-            Provide a comprehensive summary of the medicine '{medicine_name}'. Include the following information:
+            The following is the medicine name: {medicine_name}
+            Provide a super-simplified, easy to understand layman's summary of the medicine '{medicine_name}' for patients to understand. 
+            Include the following information:
             1. Generic name and common brand names
             2. What it's used for (indications)
             3. How it works (mechanism of action)
@@ -44,7 +46,7 @@ class PerplexityService:
             7. Dosage information (general guidance)
             8. Storage instructions
             
-            Format the response in a clear, structured manner suitable for both patients and healthcare professionals.
+            Format the response in a clear, structured manner suitable for patients. Keep it short and concise for non-medical people.
             """
             
             response = client.chat.completions.create(
@@ -55,7 +57,7 @@ class PerplexityService:
                         "content": prompt
                     }
                 ],
-                max_tokens=1500,
+                max_tokens=1000,
                 temperature=0.3,
                 top_p=0.9
             )

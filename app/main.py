@@ -976,23 +976,23 @@ async def list_medications(
 # AGENT INTERACTION ENDPOINTS
 # =============================================================================
 
-@app.post("/agent/query", response_model=AgentResponse)
-async def query_agent(query: AgentQuery):
-    """Send natural language query to the health agent"""
-    try:
-        response = await agent_service.process_query(query)
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/agent/query", response_model=AgentResponse)
+# async def query_agent(query: AgentQuery):
+#     """Send natural language query to the health agent"""
+#     try:
+#         response = await agent_service.process_query(query)
+#         return response
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/agent/summarize", response_model=SummaryResponse)
-async def generate_summary(request: SummaryRequest, background_tasks: BackgroundTasks):
-    """Generate layman and/or doctor summaries using AI"""
-    try:
-        response = await agent_service.generate_summary(request)
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/agent/summarize", response_model=SummaryResponse)
+# async def generate_summary(request: SummaryRequest, background_tasks: BackgroundTasks):
+#     """Generate layman and/or doctor summaries using AI"""
+#     try:
+#         response = await agent_service.generate_summary(request)
+#         return response
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/medicines/{medicine_name}/summary")
 async def get_medicine_summary(medicine_name: str):

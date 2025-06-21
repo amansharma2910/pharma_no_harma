@@ -301,7 +301,7 @@ class AgentService:
     async def generate_medicine_summary_via_perplexity(self, medicine_name: str) -> str:
         """Generate medicine summary using Perplexity API"""
         try:
-            return await perplexity_service.search_medicine(medicine_name)
+            return await perplexity_service.generate_summary(medicine_name)
         except Exception as e:
             logger.error(f"Error generating medicine summary: {e}")
             return f"Information about {medicine_name} is not available at this time."
