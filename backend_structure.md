@@ -1155,7 +1155,7 @@ class Settings(BaseSettings):
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USERNAME: str = "neo4j"
     NEO4J_PASSWORD: str = "password"
-    NEO4J_DATABASE: str = "healthrecords"
+    NEO4J_DATABASE: str = "neo4j"
     
     # API Configuration
     API_V1_STR: str = "/api/v1"
