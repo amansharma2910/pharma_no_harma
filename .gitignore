@@ -8,3 +8,5 @@ venv/
 *.pywz
 *.pyzw
 .env
+uploads/
+exports/
