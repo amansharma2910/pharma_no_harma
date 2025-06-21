@@ -298,7 +298,6 @@ class FileUpdate(BaseModel):
 
 class AgentQuery(BaseModel):
     query: str
-    context: Optional[Dict[str, Any]] = None
     health_record_id: Optional[str] = None
     user_id: str
     user_type: UserType

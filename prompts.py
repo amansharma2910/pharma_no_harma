@@ -1,4 +1,3 @@
- 
 graph_schema_prompt = """
 # Neo4j Healthcare Knowledge Graph Schema Context
 
@@ -157,3 +156,46 @@ RETURN hr, collect(f) as files, collect(m) as medications
 
 Generate Cypher queries that are secure, performant, and respect the healthcare domain's privacy requirements.
 """
+
+# Summarized version for quick reference
+graph_schema_summary = """
+# Healthcare Knowledge Graph - Quick Reference
+
+## Core Entities:
+- **User**: Patients (`user_type: "PATIENT"`) and Doctors (`user_type: "DOCTOR"`)
+- **HealthRecord**: Medical records owned by patients, managed by doctors
+- **Medication**: Prescribed drugs with dosage, frequency, instructions
+- **File**: Medical documents with parsed content and summaries
+- **AuditLog**: System activity tracking for compliance
+
+## Key Relationships:
+- `(Patient)-[:OWNS]->(HealthRecord)`: Patient ownership
+- `(Doctor)-[:MANAGES]->(HealthRecord)`: Doctor management
+- `(Doctor)-[:PRESCRIBED]->(Medication)`: Medication prescriptions
+- `(Doctor)-[:TREATS]->(Patient)`: Doctor-patient relationships
+- `(User)-[:UPLOADED]->(File)`: File uploads
+- `(HealthRecord)-[:HAS_FILE]->(File)`: Record-file associations
+- `(HealthRecord)-[:HAS_MEDICATION]->(Medication)`: Record-medication links
+
+## Essential Properties:
+- **User**: `id`, `name`, `email`, `user_type`, `specialization` (doctors)
+- **HealthRecord**: `id`, `title`, `ailment`, `status`, `layman_summary`, `medical_summary`
+- **Medication**: `id`, `medication_name`, `dosage`, `frequency`, `instructions`
+- **File**: `id`, `filename`, `parsed_content`, `layman_summary`, `doctor_summary`
+
+## Query Patterns:
+```cypher
+# Find patient records
+MATCH (p:User {user_type: "PATIENT", id: $id})-[:OWNS]->(hr:HealthRecord)
+
+# Find doctor's patients  
+MATCH (d:User {user_type: "DOCTOR", id: $id})-[:TREATS]->(p:User)
+
+# Get complete record with files/medications
+MATCH (hr:HealthRecord {id: $id})
+OPTIONAL MATCH (hr)-[:HAS_FILE]->(f:File)
+OPTIONAL MATCH (hr)-[:HAS_MEDICATION]->(m:Medication)
+```
+
+## Security: Always filter by user permissions and relationships.
+""" 

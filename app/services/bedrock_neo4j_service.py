@@ -1,6 +1,7 @@
 import logging
 import json
 from typing import Dict, Any, Optional, List
+from prompts import graph_schema_summary, graph_schema_prompt
 from app.services.bedrock_service import bedrock_service
 from app.services.neo4j_service import neo4j_service
 from app.models.schemas import AgentQuery, AgentResponse, SummaryRequest, SummaryResponse
@@ -17,8 +18,7 @@ class BedrockNeo4jService:
         """Process query using Bedrock with Neo4j knowledge graph context"""
         try:
             # Step 1: Analyze query intent and extract entities
-            intent_analysis = await self._analyze_query_intent(query.query)
-            
+            intent_analysis = await self._analyze_query_intent(query.query, query.user_id, query.user_type, query.health_record_id)
             # Step 2: Generate Cypher queries based on intent
             cypher_queries = await self._generate_cypher_queries(intent_analysis, query)
             
@@ -35,25 +35,31 @@ class BedrockNeo4jService:
             # Fallback to basic Bedrock response
             return await self.bedrock_service.process_query_with_bedrock(query)
     
-    async def _analyze_query_intent(self, query: str) -> Dict[str, Any]:
+    async def _analyze_query_intent(self, query: str, user_id: str = None, user_type: str = None, health_record_id: str = None) -> Dict[str, Any]:
         """Analyze query to understand intent and extract entities"""
         try:
             analysis_prompt = f"""
-            Analyze this medical query and extract:
+            The following is the query to be analyzed: {query}.
+
+            Based on the query, find the following information. Do not make up any information. Do not make assumptions. All the information is strictly from the query.
+
+            Your task is to analyze this medical query and extract:
             1. Intent (what the user wants to know)
-            2. Entities (patient names, medications, conditions, etc.)
-            3. Query type (patient_info, medication, appointment, etc.)
+            2. User ID
+            3. User type; can be PATIENT or DOCTOR
+            4. HealthRecord ID
+            3. Query type (patient_info, HealthRecord summary, File summary, medication, appointment, etc.)
             
-            Query: {query}
-            
-            Return as JSON:
+            The final output should be a JSON object with the following fields:
             {{
-                "intent": "string",
-                "entities": ["entity1", "entity2"],
-                "query_type": "string",
-                "requires_patient_context": boolean,
-                "requires_medical_context": boolean
+                "intent": "str",
+                "user_id": {user_id},
+                "user_type": {user_type},
+                "health_record_id: "str",
+                "query_type": "str"
             }}
+
+            Strictly follow the JSON format. Do not add any other text or comments.
             """
             
             response = await self.bedrock_service.invoke_model(
@@ -66,22 +72,18 @@ class BedrockNeo4jService:
                 return json.loads(response)
             except json.JSONDecodeError:
                 # Fallback parsing
-                return {
-                    "intent": "general_query",
-                    "entities": [],
-                    "query_type": "general",
-                    "requires_patient_context": False,
-                    "requires_medical_context": True
-                }
+                logger.info(query)
+                logger.info(response)
                 
         except Exception as e:
             logger.error(f"Error analyzing query intent: {e}")
             return {
                 "intent": "general_query",
                 "entities": [],
-                "query_type": "general",
-                "requires_patient_context": False,
-                "requires_medical_context": True
+                "user_id": {user_id},
+                "user_type": {user_type},
+                "health_record_id": {health_record_id},
+                "query_type": "general"
             }
     
     async def _generate_cypher_queries(self, intent_analysis: Dict[str, Any], query: AgentQuery) -> List[str]:
@@ -91,15 +93,30 @@ class BedrockNeo4jService:
             Generate Cypher queries for Neo4j based on this intent analysis:
             
             Intent: {intent_analysis['intent']}
-            Entities: {intent_analysis['entities']}
+            id: {intent_analysis['user_id']}
+            user_type: {intent_analysis['user_type']}
+            Health Record ID: {intent_analysis['health_record_id']}
             Query Type: {intent_analysis['query_type']}
-            User Type: {query.user_type.value}
             
             Available node types: User, HealthRecord, Medication, File, Appointment
-            Available relationships: HAS_RECORD, PRESCRIBED, UPLOADED, SCHEDULED
+            Available relationships: 
+            - (User)-[:OWNS]->(HealthRecord) --> Here, user has user_type: PATIENT
+            - (User)-[:MANAGES]->(HealthRecord) --> Here, user has user_type: DOCTOR
+            - (User)-[:PRESCRIBED]->(Medication) --> Here, user has user_type: DOCTOR
+            - (User)-[:TREATS]->(User) --> Here, first user has user_type: DOCTOR and second user has user_type: PATIENT
+            - (User)-[:UPLOADED]->(File) --> Here, user can be both PATIENT and DOCTOR
+            - (HealthRecord)-[:HAS_FILE]->(File) --> Record-file associations
+            - (HealthRecord)-[:HAS_MEDICATION]->(Medication) --> Record-medication links
+
+            ## Essential Properties:
+            - User: id, name, email, user_type, specialization (doctors)
+            - HealthRecord: id, title, ailment, status, layman_summary, medical_summary
+            - Medication: id, medication_name, dosage, frequency, instructions
+            - File: id, filename, parsed_content, layman_summary, doctor_summary
             
-            Generate 1-3 Cypher queries that would retrieve relevant information.
-            Return only the Cypher queries, one per line.
+            Generate a detailed Cypher query that would retrieve the relevant information. Ensure the generated cypher query strictly has a RETURN clause, return the relevant nodes and relationships.
+            
+            Return only the Cypher query. Do not add any other text or comments.
             """
             
             response = await self.bedrock_service.invoke_model(

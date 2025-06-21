@@ -28,81 +28,12 @@ async def bedrock_query_with_neo4j(query: AgentQuery):
     try:
         if not settings.AWS_ACCESS_KEY_ID:
             raise HTTPException(status_code=400, detail="AWS Bedrock not configured")
-        
         response = await bedrock_neo4j_service.process_query_with_neo4j_context(query)
         return response
     except Exception as e:
         logger.error(f"Bedrock + Neo4j query error: {e}")
         raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
 
-@router.post("/bedrock/summary", response_model=SummaryResponse)
-async def bedrock_summary(request: SummaryRequest):
-    """Generate summary using AWS Bedrock"""
-    try:
-        if not settings.AWS_ACCESS_KEY_ID:
-            raise HTTPException(status_code=400, detail="AWS Bedrock not configured")
-        
-        response = await bedrock_service.generate_summary_with_bedrock(request)
-        return response
-    except Exception as e:
-        logger.error(f"Bedrock summary error: {e}")
-        raise HTTPException(status_code=500, detail=f"Summary generation failed: {str(e)}")
-
-@router.post("/bedrock/invoke-model")
-async def invoke_bedrock_model(
-    prompt: str,
-    model_id: Optional[str] = None,
-    max_tokens: int = 1500,
-    temperature: float = 0.3,
-    inference_profile_arn: Optional[str] = None
-):
-    """Invoke AWS Bedrock model directly (only supports amazon.nova-pro-v1:0)"""
-    try:
-        if not settings.AWS_ACCESS_KEY_ID:
-            raise HTTPException(status_code=400, detail="AWS Bedrock not configured")
-        
-        response = await bedrock_service.invoke_model(
-            prompt=prompt,
-            model_id="amazon.nova-pro-v1:0",  # Force Nova Pro model
-            max_tokens=max_tokens,
-            temperature=temperature,
-            inference_profile_arn=inference_profile_arn
-        )
-        
-        return {
-            "response": response,
-            "model_id": "amazon.nova-pro-v1:0",
-            "supported_model": "amazon.nova-pro-v1:0",
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "inference_profile_arn": inference_profile_arn
-        }
-    except Exception as e:
-        logger.error(f"Bedrock model invocation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Model invocation failed: {str(e)}")
-
-@router.post("/bedrock/generate-cypher")
-async def generate_cypher_from_natural_language(
-    natural_language: str,
-    context: Optional[Dict[str, Any]] = None
-):
-    """Generate Cypher query from natural language using Bedrock"""
-    try:
-        if not settings.AWS_ACCESS_KEY_ID:
-            raise HTTPException(status_code=400, detail="AWS Bedrock not configured")
-        
-        cypher_query = await bedrock_neo4j_service.generate_cypher_from_natural_language(
-            natural_language, context
-        )
-        
-        return {
-            "natural_language": natural_language,
-            "cypher_query": cypher_query,
-            "context": context
-        }
-    except Exception as e:
-        logger.error(f"Cypher generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Cypher generation failed: {str(e)}")
 
 @router.get("/bedrock/patient-context/{patient_id}")
 async def get_patient_context(patient_id: str):
