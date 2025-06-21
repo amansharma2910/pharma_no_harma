@@ -28,6 +28,17 @@ class Settings(BaseSettings):
     OPENROUTER_SITE_URL: Optional[str] = None
     OPENROUTER_SITE_NAME: Optional[str] = None
     
+    # AWS Bedrock Configuration
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION: str = "us-east-1"
+    AWS_SESSION_TOKEN: Optional[str] = None
+    AWS_ACCOUNT_ID: Optional[str] = None
+    
+    # AWS Bedrock Models
+    BEDROCK_MODEL_ID: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+    BEDROCK_INFERENCE_PROFILE_ARN: Optional[str] = None
+    
     # Security
     SECRET_KEY: str = "your-secret-key-here-change-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

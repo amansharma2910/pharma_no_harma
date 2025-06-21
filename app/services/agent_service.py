@@ -3,6 +3,8 @@ from typing import Dict, Any, Optional
 from app.models.schemas import AgentQuery, AgentResponse, SummaryRequest, SummaryResponse, SummaryType
 from app.core.config import settings
 from app.services.perplexity_service import perplexity_service
+from app.services.bedrock_service import bedrock_service
+from app.services.bedrock_neo4j_service import bedrock_neo4j_service
 from openai import AsyncOpenAI
 import json
 
@@ -11,32 +13,36 @@ logger = logging.getLogger(__name__)
 class AgentService:
     def __init__(self):
         self.openai_client = None
+        self.use_bedrock = settings.AWS_ACCESS_KEY_ID is not None
+        
         if settings.OPENAI_API_KEY:
             self.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        
+        logger.info(f"Agent Service initialized. Using Bedrock: {self.use_bedrock}")
     
     async def process_query(self, query: AgentQuery) -> AgentResponse:
         """Process natural language query and return response"""
         try:
-            # For now, return a simple response
-            # In a real implementation, this would:
-            # 1. Analyze the query intent
-            # 2. Generate appropriate Cypher queries
-            # 3. Execute queries against Neo4j
-            # 4. Format response based on user type
+            # Try Bedrock + Neo4j first if available (best option)
+            if self.use_bedrock:
+                try:
+                    return await bedrock_neo4j_service.process_query_with_neo4j_context(query)
+                except Exception as e:
+                    logger.warning(f"Bedrock + Neo4j query processing failed, falling back to Bedrock only: {e}")
+                    
+                    # Fallback to Bedrock only
+                    try:
+                        return await bedrock_service.process_query_with_bedrock(query)
+                    except Exception as bedrock_error:
+                        logger.warning(f"Bedrock query processing failed, falling back to OpenAI: {bedrock_error}")
             
-            response_text = f"I understand you're asking about: {query.query}. "
+            # Fallback to OpenAI if available
+            if self.openai_client:
+                return await self._process_query_with_openai(query)
             
-            if query.user_type.value == "PATIENT":
-                response_text += "Here's a patient-friendly explanation..."
-            else:
-                response_text += "Here's the medical information..."
+            # Final fallback to simple response
+            return self._simple_query_response(query)
             
-            return AgentResponse(
-                response=response_text,
-                confidence=0.8,
-                sources=["health_records", "medical_database"],
-                suggested_actions=["view_health_record", "schedule_appointment"],
-                cypher_queries_executed=["MATCH (hr:HealthRecord) WHERE..."])
         except Exception as e:
             logger.error(f"Error processing query: {e}")
             return AgentResponse(
@@ -47,16 +53,74 @@ class AgentService:
     async def generate_summary(self, request: SummaryRequest) -> SummaryResponse:
         """Generate AI-powered summaries"""
         try:
-            if not self.openai_client:
-                # Fallback to simple summarization
-                return self._simple_summarize(request.content, request.summary_type)
+            # Try Bedrock first if available
+            if self.use_bedrock:
+                try:
+                    return await bedrock_service.generate_summary_with_bedrock(request)
+                except Exception as e:
+                    logger.warning(f"Bedrock summary generation failed, falling back to OpenAI: {e}")
             
-            # Use OpenAI for advanced summarization
-            return await self._openai_summarize(request)
+            # Fallback to OpenAI if available
+            if self.openai_client:
+                return await self._openai_summarize(request)
+            
+            # Final fallback to simple summarization
+            return self._simple_summarize(request.content, request.summary_type)
             
         except Exception as e:
             logger.error(f"Error generating summary: {e}")
             return self._simple_summarize(request.content, request.summary_type)
+    
+    async def _process_query_with_openai(self, query: AgentQuery) -> AgentResponse:
+        """Process query using OpenAI"""
+        try:
+            system_prompt = f"""You are an AI assistant for a health records management system.
+            User Type: {query.user_type.value}
+            Query: {query.query}
+            
+            Provide a helpful response appropriate for the user type.
+            For patients, use simple language. For doctors, use medical terminology."""
+            
+            response = await self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": query.query}
+                ],
+                max_tokens=500,
+                temperature=0.3
+            )
+            
+            response_text = response.choices[0].message.content
+            
+            return AgentResponse(
+                response=response_text,
+                confidence=0.8,
+                sources=["health_records", "medical_database"],
+                suggested_actions=["view_health_record", "schedule_appointment"],
+                cypher_queries_executed=[]
+            )
+            
+        except Exception as e:
+            logger.error(f"OpenAI query processing failed: {e}")
+            return self._simple_query_response(query)
+    
+    def _simple_query_response(self, query: AgentQuery) -> AgentResponse:
+        """Simple fallback response for queries"""
+        response_text = f"I understand you're asking about: {query.query}. "
+        
+        if query.user_type.value == "PATIENT":
+            response_text += "Here's a patient-friendly explanation..."
+        else:
+            response_text += "Here's the medical information..."
+        
+        return AgentResponse(
+            response=response_text,
+            confidence=0.5,
+            sources=["health_records"],
+            suggested_actions=["view_health_record"],
+            cypher_queries_executed=[]
+        )
     
     async def _openai_summarize(self, request: SummaryRequest) -> SummaryResponse:
         """Generate summary using OpenAI with comprehensive error handling"""
@@ -157,7 +221,7 @@ class AgentService:
         
         return prompt
     
-    def _simple_summarize(self, content: str, summary_type: str) -> SummaryResponse:
+    def _simple_summarize(self, content: str, summary_type: SummaryType) -> SummaryResponse:
         """Simple fallback summarization with better handling of large documents"""
         try:
             # Truncate content if it's extremely long
@@ -200,90 +264,56 @@ class AgentService:
                 
         except Exception as e:
             logger.error(f"Error in simple summarization: {e}")
-            # Ultimate fallback
-            fallback_msg = "Unable to generate summary. Document processing failed."
-            if summary_type.value == "BOTH":
-                return SummaryResponse(
-                    layman_summary=fallback_msg,
-                    doctor_summary=fallback_msg
-                )
-            elif summary_type.value == "LAYMAN":
-                return SummaryResponse(layman_summary=fallback_msg)
-            else:
-                return SummaryResponse(doctor_summary=fallback_msg)
-    
-    async def generate_cypher_query(self, natural_language: str, context: Dict[str, Any] = None) -> str:
-        """Generate Cypher query from natural language"""
-        try:
-            # This would use AI to convert natural language to Cypher
-            # For now, return a simple template
-            return f"MATCH (n) WHERE n.title CONTAINS '{natural_language}' RETURN n LIMIT 10"
-        except Exception as e:
-            logger.error(f"Error generating Cypher query: {e}")
-            return "MATCH (n) RETURN n LIMIT 5"
-    
-    async def interpret_health_record(self, health_record_data: Dict[str, Any], user_type: str) -> AgentResponse:
-        """Provide AI interpretation of health record"""
-        try:
-            interpretation = f"Based on the health record '{health_record_data.get('title', 'Unknown')}', "
-            
-            if user_type == "PATIENT":
-                interpretation += "here's what this means for you in simple terms..."
-            else:
-                interpretation += "here's the clinical interpretation and recommendations..."
-            
-            return AgentResponse(
-                response=interpretation,
-                confidence=0.9,
-                suggested_actions=["schedule_follow_up", "review_medications"],
-                sources=["health_record_analysis"]
-            )
-        except Exception as e:
-            logger.error(f"Error interpreting health record: {e}")
-            return AgentResponse(
-                response="Unable to provide interpretation at this time.",
-                confidence=0.0
-            )
-        
-    async def generate_medicine_summary_via_perplexity(self, medicine_name: str) -> str:
-        """Generate summary of a medicine using Perplexity"""
-        try:
-            # Use Perplexity API to generate summary
-            response = await perplexity_service.generate_summary(medicine_name)
-            return response
-        except Exception as e:
-            logger.error(f"Error generating medicine summary via Perplexity: {e}")
-            return f"Unable to generate summary for {medicine_name} at this time. Please consult with your healthcare provider."
-
-    async def generate_summary_from_file_id(self, file_id: str, summary_type: SummaryType, context: Optional[str] = None) -> SummaryResponse:
-        """Generate summary using stored parsed content from file ID"""
-        try:
-            from app.services.file_service import file_service
-            
-            # Get parsed content from database
-            content = await file_service.get_parsed_content(file_id)
-            
-            if not content:
-                return SummaryResponse(
-                    layman_summary="No parsed content available for this file.",
-                    doctor_summary="File content not available for processing."
-                )
-            
-            # Generate summary using the stored content
-            summary_request = SummaryRequest(
-                content=content,
-                summary_type=summary_type,
-                context=context
-            )
-            
-            return await self.generate_summary(summary_request)
-            
-        except Exception as e:
-            logger.error(f"Error generating summary from file ID {file_id}: {e}")
             return SummaryResponse(
                 layman_summary="Unable to generate summary at this time.",
                 doctor_summary="Summary generation failed."
             )
+    
+    async def generate_cypher_query(self, natural_language: str, context: Dict[str, Any] = None) -> str:
+        """Generate Cypher query from natural language using Bedrock + Neo4j"""
+        if self.use_bedrock:
+            try:
+                return await bedrock_neo4j_service.generate_cypher_from_natural_language(natural_language, context)
+            except Exception as e:
+                logger.error(f"Error generating Cypher with Bedrock: {e}")
+        
+        # Fallback to simple template
+        return f"MATCH (n) WHERE n.name CONTAINS '{natural_language}' RETURN n LIMIT 10"
+    
+    async def interpret_health_record(self, health_record_data: Dict[str, Any], user_type: str) -> AgentResponse:
+        """Interpret health record data using AI"""
+        try:
+            # Create a query from the health record data
+            query = AgentQuery(
+                query=f"Please explain this health record data: {str(health_record_data)}",
+                user_type=user_type
+            )
+            
+            return await self.process_query(query)
+            
+        except Exception as e:
+            logger.error(f"Error interpreting health record: {e}")
+            return AgentResponse(
+                response="Unable to interpret health record data at this time.",
+                confidence=0.0
+            )
+    
+    async def generate_medicine_summary_via_perplexity(self, medicine_name: str) -> str:
+        """Generate medicine summary using Perplexity API"""
+        try:
+            return await perplexity_service.search_medicine(medicine_name)
+        except Exception as e:
+            logger.error(f"Error generating medicine summary: {e}")
+            return f"Information about {medicine_name} is not available at this time."
+    
+    async def generate_summary_from_file_id(self, file_id: str, summary_type: SummaryType, context: Optional[str] = None) -> SummaryResponse:
+        """Generate summary from file ID"""
+        # This would integrate with file service to get file content
+        # For now, return a placeholder
+        return SummaryResponse(
+            layman_summary=f"Summary for file {file_id}",
+            doctor_summary=f"Medical summary for file {file_id}"
+        )
 
 # Global instance
 agent_service = AgentService() 

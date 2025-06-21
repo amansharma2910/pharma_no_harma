@@ -29,6 +29,9 @@ from app.services.file_service import file_service
 from app.services.audit_service import audit_service
 from app.core.config import settings
 
+# Import Bedrock router
+from app.api.endpoints.bedrock import router as bedrock_router
+
 logger = logging.getLogger(__name__)
 
 def convert_neo4j_dates(data: Any) -> Any:
@@ -89,6 +92,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include Bedrock router
+app.include_router(bedrock_router, prefix="/api/v1", tags=["AWS Bedrock"])
 
 # =============================================================================
 # USER ENDPOINTS

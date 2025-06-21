@@ -1,359 +1,318 @@
-# Health Records API
+# Health Records Management System
 
-A comprehensive FastAPI-based health records management system with AI-powered features for elderly care.
+A comprehensive FastAPI-based health records management system with AI-powered features using AWS Bedrock and Neo4j graph database.
 
 ## Features
 
-- **User Management**: Patient and doctor accounts with role-based access
-- **Health Records**: Complete medical record management with relationships
-- **File Management**: Document upload, processing, and AI-powered summarization
-- **Medication Tracking**: Prescription management with approval workflows
-- **AI Agent**: Natural language queries and intelligent responses
-- **Search**: Full-text search across all medical data
-- **Audit Logging**: Complete activity tracking for compliance
-- **Export**: PDF generation for medical records
-- **Neo4j Integration**: Graph database for complex medical relationships
+- **Health Records Management**: Complete CRUD operations for patient records
+- **AI-Powered Queries**: Natural language processing with AWS Bedrock
+- **Neo4j Integration**: Graph database for complex health data relationships
+- **Document Processing**: AI-powered document parsing and summarization
+- **Export Functionality**: PDF generation and data export
+- **Background Tasks**: Asynchronous processing with Celery
+- **RESTful API**: Comprehensive API with automatic documentation
 
 ## Tech Stack
 
-- **Backend**: FastAPI (Python)
+- **Backend**: FastAPI, Python 3.8+
 - **Database**: Neo4j (Graph Database)
-- **AI/ML**: OpenAI GPT-3.5 for summarization and queries
-- **File Storage**: Local filesystem (configurable)
-- **Background Tasks**: Async processing for file analysis
-- **Documentation**: Auto-generated OpenAPI/Swagger
+- **AI Services**: AWS Bedrock (Claude, Titan, Llama)
+- **Task Queue**: Celery with Redis
+- **Document Processing**: LlamaParse
+- **Export**: ReportLab for PDF generation
 
-## Project Structure
+## Quick Start
 
-```
-health_records_api/
-├── app/
-│   ├── __init__.py
-│   ├── main.py                 # FastAPI application entry point
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── endpoints/          # API route handlers
-│   │       └── __init__.py
-│   ├── core/
-│   │   ├── __init__.py
-│   │   └── config.py           # Application configuration
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py          # Pydantic models and schemas
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── agent_service.py    # AI agent functionality
-│   │   ├── audit_service.py    # Audit logging service
-│   │   ├── file_service.py     # File management service
-│   │   └── neo4j_service.py    # Neo4j database operations
-│   └── utils/
-│       ├── __init__.py
-│       └── helpers.py          # Utility functions
-├── uploads/                    # File upload directory
-├── exports/                    # PDF export directory
-├── requirements.txt            # Python dependencies
-├── run.py                      # Application startup script
-├── init_db.py                  # Database initialization
-├── env.example                 # Environment variables template
-├── .gitignore
-└── README.md
-```
-
-## Prerequisites
+### Prerequisites
 
 - Python 3.8+
-- Neo4j Database (4.4+)
+- Neo4j Database
+- AWS Account with Bedrock access
 - Redis (for background tasks)
-- OpenAI API key (for AI features)
 
-## Installation
+### Installation
 
-1. **Clone the repository**
+1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd health_records_api
+   cd pharma_no_harma
    ```
 
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Set up environment variables**
+3. **Set up environment**:
    ```bash
    cp env.example .env
    # Edit .env with your configuration
    ```
 
-5. **Start Neo4j Database**
+4. **Configure Neo4j**:
+   - Start Neo4j database
+   - Update connection details in `.env`
+
+5. **Configure AWS Bedrock**:
    ```bash
-   # Using Docker
-   docker run -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest
-   
-   # Or install Neo4j Desktop/Server locally
+   python setup_bedrock.py
    ```
 
-6. **Start Redis (for background tasks)**
-   ```bash
-   # Using Docker
-   docker run -p 6379:6379 redis:latest
-   
-   # Or install Redis locally
-   ```
-
-7. **Initialize the database**
-   ```bash
-   python init_db.py
-   ```
-
-8. **Run the application**
+6. **Start the application**:
    ```bash
    python run.py
    ```
 
 The API will be available at `http://localhost:8000`
-API documentation: `http://localhost:8000/docs`
+
+## AWS Bedrock Integration
+
+The system integrates AWS Bedrock with your existing Neo4j knowledge graph for intelligent, context-aware health record queries.
+
+### Key Benefits
+
+- **Leverages Existing Data**: Uses your current Neo4j knowledge graph
+- **Complex Relationships**: Exploits graph relationships for better context
+- **Real-time Access**: Always up-to-date with latest data
+- **No Data Duplication**: No need for separate knowledge base
+
+### Setup
+
+1. **Configure AWS Credentials**:
+   ```bash
+   aws configure
+   # Or set environment variables
+   export AWS_ACCESS_KEY_ID=your_key
+   export AWS_SECRET_ACCESS_KEY=your_secret
+   export AWS_REGION=us-east-1
+   ```
+
+2. **Enable Bedrock Models**:
+   - Go to AWS Bedrock Console
+   - Request access to desired models (Claude, Titan, Llama)
+
+3. **Run Setup Script**:
+   ```bash
+   python setup_bedrock.py
+   ```
+
+### Usage Examples
+
+```bash
+# Basic query with Bedrock
+curl -X POST "http://localhost:8000/api/v1/bedrock/query" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What are my recent blood pressure readings?", "user_type": "PATIENT"}'
+
+# Neo4j-enhanced query
+curl -X POST "http://localhost:8000/api/v1/bedrock/query-with-neo4j" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Show me patients with diabetes and their medications", "user_type": "DOCTOR"}'
+
+# Health check
+curl http://localhost:8000/api/v1/bedrock/health
+```
+
+For detailed Bedrock integration documentation, see [AWS_BEDROCK_INTEGRATION.md](AWS_BEDROCK_INTEGRATION.md).
+
+## API Documentation
+
+Once the application is running, you can access:
+
+- **Interactive API Docs**: http://localhost:8000/docs
+- **ReDoc Documentation**: http://localhost:8000/redoc
+- **OpenAPI Schema**: http://localhost:8000/openapi.json
+
+## Core Endpoints
+
+### Health Records
+- `GET /api/v1/health-records` - List all health records
+- `POST /api/v1/health-records` - Create new health record
+- `GET /api/v1/health-records/{record_id}` - Get specific record
+- `PUT /api/v1/health-records/{record_id}` - Update record
+- `DELETE /api/v1/health-records/{record_id}` - Delete record
+
+### AI Services
+- `POST /api/v1/bedrock/query` - Process query with Bedrock
+- `POST /api/v1/bedrock/query-with-neo4j` - Neo4j-enhanced query
+- `POST /api/v1/bedrock/summary` - Generate AI summaries
+- `POST /api/v1/bedrock/generate-cypher` - Generate Cypher queries
+
+### Document Processing
+- `POST /api/v1/documents/upload` - Upload and process documents
+- `POST /api/v1/documents/summarize` - Generate document summaries
+- `GET /api/v1/documents/{document_id}` - Get document details
+
+### Export
+- `POST /api/v1/export/pdf` - Generate PDF reports
+- `GET /api/v1/export/health-records` - Export health records
 
 ## Configuration
 
 ### Environment Variables
 
-Copy `env.example` to `.env` and configure the following variables:
+Key configuration options in `.env`:
 
-```bash
+```env
 # Neo4j Configuration
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=password
-NEO4J_DATABASE=neo4j
 
-# API Configuration
-API_V1_STR=/api/v1
-PROJECT_NAME=Health Records API
-DEBUG=true
+# AWS Bedrock Configuration
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 
-# File Storage
-UPLOAD_DIR=./uploads
-MAX_FILE_SIZE=52428800
-ALLOWED_FILE_TYPES=["TXT", "PDF", "JPG", "JPEG"]
-
-# AI Service Configuration
-OPENAI_API_KEY=your_openai_api_key_here
-LLAMA_CLOUD_API_KEY=your_llama_cloud_api_key_here
-
-# Security
-SECRET_KEY=your-secret-key-here-change-in-production
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+# AI Services
+OPENAI_API_KEY=your_openai_key  # Optional fallback
+LLAMA_CLOUD_API_KEY=your_llama_key  # For document parsing
 
 # Background Tasks
 CELERY_BROKER_URL=redis://localhost:6379
-CELERY_RESULT_BACKEND=redis://localhost:6379
-
-# Export Configuration
-PDF_EXPORT_DIR=./exports
-EXPORT_URL_PREFIX=http://localhost:8000/exports
-
-# Logging
-LOG_LEVEL=INFO
 ```
 
-## API Endpoints
+### Available Bedrock Models
 
-### Authentication
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/register` - User registration
-- `POST /api/v1/auth/refresh` - Refresh access token
+| Model ID | Description | Use Case | On-Demand Support |
+|----------|-------------|----------|-------------------|
+| `anthropic.claude-3-sonnet-20240229-v1:0` | Claude 3 Sonnet | General queries, balanced performance | ✅ Yes |
+| `anthropic.claude-3-haiku-20240307-v1:0` | Claude 3 Haiku | Fast responses, simple queries | ✅ Yes |
+| `anthropic.claude-3-opus-20240229-v1:0` | Claude 3 Opus | Complex reasoning, detailed analysis | ✅ Yes |
+| `amazon.titan-text-express-v1` | Amazon Titan | Cost-effective, good performance | ✅ Yes |
+| `meta.llama2-13b-chat-v1` | Llama 2 13B | Open source alternative | ✅ Yes |
+| `amazon.nova-pro-v1:0` | Amazon Nova Pro | Advanced reasoning | ❌ Requires inference profile |
 
-### Users
-- `GET /api/v1/users/me` - Get current user profile
-- `PUT /api/v1/users/me` - Update user profile
-- `GET /api/v1/users/{user_id}` - Get user by ID
+## Troubleshooting
 
-### Health Records
-- `GET /api/v1/records` - List health records
-- `POST /api/v1/records` - Create new health record
-- `GET /api/v1/records/{record_id}` - Get specific record
-- `PUT /api/v1/records/{record_id}` - Update record
-- `DELETE /api/v1/records/{record_id}` - Delete record
+### Bedrock Model Configuration Issues
 
-### File Management
-- `POST /api/v1/files/upload` - Upload medical documents
-- `GET /api/v1/files/{file_id}` - Get file information
-- `DELETE /api/v1/files/{file_id}` - Delete file
-- `GET /api/v1/files/{file_id}/summary` - Get AI-generated summary
-
-### Medications
-- `GET /api/v1/medications` - List medications
-- `POST /api/v1/medications` - Create medication record
-- `PUT /api/v1/medications/{med_id}/approve` - Approve medication
-- `GET /api/v1/medications/pending` - Get pending approvals
-
-### AI Agent
-- `POST /api/v1/agent/query` - Natural language queries
-- `GET /api/v1/agent/chat` - Chat with AI agent
-
-### Search
-- `GET /api/v1/search` - Full-text search across records
-- `GET /api/v1/search/advanced` - Advanced search with filters
-
-### Export
-- `GET /api/v1/export/record/{record_id}` - Export record as PDF
-- `GET /api/v1/export/patient/{patient_id}` - Export patient summary
-
-### Audit
-- `GET /api/v1/audit/logs` - View audit logs
-- `GET /api/v1/audit/activity/{user_id}` - User activity history
-
-## Usage Examples
-
-### Creating a Health Record
-
-```python
-import requests
-
-# Login
-response = requests.post("http://localhost:8000/api/v1/auth/login", json={
-    "username": "doctor@example.com",
-    "password": "password123"
-})
-token = response.json()["access_token"]
-
-# Create health record
-headers = {"Authorization": f"Bearer {token}"}
-record_data = {
-    "patient_id": "patient123",
-    "record_type": "consultation",
-    "title": "Annual Checkup",
-    "content": "Patient shows good health indicators...",
-    "date": "2024-01-15"
-}
-
-response = requests.post(
-    "http://localhost:8000/api/v1/records",
-    json=record_data,
-    headers=headers
-)
+If you encounter errors like:
+```
+ValidationException: Model amazon.nova-pro-v1:0 does not support on-demand throughput. 
+Please use an inference profile for this model.
 ```
 
-### Uploading and Processing Documents
+**Solution**: Use a model that supports on-demand usage or configure an inference profile.
 
-```python
-# Upload medical document
-with open("medical_report.pdf", "rb") as f:
-    files = {"file": f}
-    response = requests.post(
-        "http://localhost:8000/api/v1/files/upload",
-        files=files,
-        headers=headers
-    )
+**Quick Fix**:
+```bash
+# Run the model configuration fixer
+python fix_bedrock_model.py
 
-file_id = response.json()["file_id"]
-
-# Get AI summary
-summary_response = requests.get(
-    f"http://localhost:8000/api/v1/files/{file_id}/summary",
-    headers=headers
-)
-summary = summary_response.json()["summary"]
+# Or manually update your .env file
+BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 ```
 
-### AI Agent Query
+**Why this happens**: Some Bedrock models (like Nova Pro) require inference profile configuration and cannot be used with on-demand throughput. This is common in development environments where inference profiles aren't set up.
 
-```python
-# Ask natural language question
-query_data = {
-    "question": "What medications is patient John Smith currently taking?",
-    "context": "patient_id: john_smith_123"
-}
-
-response = requests.post(
-    "http://localhost:8000/api/v1/agent/query",
-    json=query_data,
-    headers=headers
-)
-
-answer = response.json()["answer"]
-```
+**For Production**: If you need to use Nova Pro models, configure an inference profile in the AWS Bedrock console.
 
 ## Development
 
+### Project Structure
+
+```
+pharma_no_harma/
+├── app/
+│   ├── api/
+│   │   ├── endpoints/
+│   │   │   ├── health_records.py
+│   │   │   ├── bedrock.py
+│   │   │   ├── documents.py
+│   │   │   └── export.py
+│   │   └── main.py
+│   ├── core/
+│   │   ├── config.py
+│   │   └── database.py
+│   ├── models/
+│   │   ├── schemas.py
+│   │   └── database.py
+│   ├── services/
+│   │   ├── bedrock_service.py
+│   │   ├── bedrock_neo4j_service.py
+│   │   ├── document_service.py
+│   │   └── export_service.py
+│   └── utils/
+├── tests/
+├── requirements.txt
+├── run.py
+└── setup_bedrock.py
+```
+
 ### Running Tests
+
 ```bash
 # Install test dependencies
-pip install pytest pytest-asyncio httpx
+pip install -r requirements-dev.txt
 
 # Run tests
 pytest
+
+# Run with coverage
+pytest --cov=app
 ```
 
-### Code Formatting
-```bash
-# Install formatting tools
-pip install black isort
+### Code Quality
 
+```bash
 # Format code
 black app/
-isort app/
+
+# Lint code
+flake8 app/
+
+# Type checking
+mypy app/
 ```
-
-### Database Schema
-
-The application uses Neo4j graph database with the following main node types:
-- **User**: Patients, doctors, and administrators
-- **HealthRecord**: Medical records and consultations
-- **Medication**: Prescriptions and drug information
-- **File**: Uploaded documents and reports
-- **AuditLog**: Activity tracking and compliance
-
-See `neo4j_kg_schema.md` for detailed schema documentation.
 
 ## Deployment
 
-### Docker Deployment
+### Docker
 
-1. **Build the image**
-   ```bash
-   docker build -t health-records-api .
-   ```
+```bash
+# Build image
+docker build -t health-records-api .
 
-2. **Run with Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
+# Run container
+docker run -p 8000:8000 health-records-api
+```
 
 ### Production Considerations
 
-- Set `DEBUG=false` in production
-- Use strong `SECRET_KEY`
-- Configure proper Neo4j authentication
-- Set up SSL/TLS certificates
-- Configure proper logging
-- Set up monitoring and health checks
-- Use production-grade Redis instance
-- Configure backup strategies for Neo4j
+1. **Environment Variables**: Use proper secrets management
+2. **Database**: Use production Neo4j instance
+3. **Redis**: Use production Redis instance
+4. **AWS**: Configure proper IAM roles and permissions
+5. **Monitoring**: Set up logging and monitoring
+6. **Security**: Enable HTTPS, authentication, rate limiting
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+4. Add tests
+5. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
 For support and questions:
-- Create an issue in the repository
-- Check the API documentation at `/docs`
-- Review the backend structure documentation in `backend_structure.md` 
+1. Check the documentation
+2. Review the API docs at `/docs`
+3. Check the logs for error details
+4. Open an issue on GitHub
+
+## Roadmap
+
+- [ ] Real-time notifications
+- [ ] Advanced analytics dashboard
+- [ ] Multi-tenant support
+- [ ] Mobile app integration
+- [ ] Advanced AI features
+- [ ] Performance optimizations 
