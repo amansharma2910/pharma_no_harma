@@ -74,7 +74,7 @@ FIXED_DOCTORS = [
 
 # Page configuration
 st.set_page_config(
-    page_title="Medical Records Management System",
+    page_title="PharmaNoHarma",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -401,7 +401,7 @@ def main():
     initialize_session_state()
     
     # Header
-    st.markdown('<h1 class="main-header">🏥 Medical Records Management System</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🏥 PharmaNoHarma</h1>', unsafe_allow_html=True)
     
     # Display current patient info in sidebar
     st.sidebar.markdown("### 👤 Current Patient")
