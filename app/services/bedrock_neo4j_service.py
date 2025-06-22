@@ -1,7 +1,7 @@
 import logging
 import json
 from typing import Dict, Any, Optional, List
-from prompts import graph_schema_summary, graph_schema_prompt
+from prompts import graph_schema_summary, graph_schema_prompt, layman_summary_prompt
 from app.services.bedrock_service import bedrock_service
 from app.services.neo4j_service import neo4j_service
 from app.models.schemas import AgentQuery, AgentResponse, SummaryRequest, SummaryResponse
@@ -369,11 +369,11 @@ class BedrockNeo4jService:
             
             results = await self.neo4j_service.execute_query(query)
             
-            # Enhance results with Bedrock-generated summaries
+            # Enhance results with Bedrock-generated summaries using improved prompt
             enhanced_results = []
             for record in results:
                 if record.get('content'):
-                    summary_prompt = f"Summarize this health record in 2-3 sentences: {record['content'][:500]}..."
+                    summary_prompt = f"{layman_summary_prompt}\n\nContent to summarize:\n{record['content'][:500]}...\n\nContext: Health record search result"
                     summary = await self.bedrock_service.invoke_model(
                         summary_prompt,
                         inference_profile_arn=settings.BEDROCK_INFERENCE_PROFILE_ARN

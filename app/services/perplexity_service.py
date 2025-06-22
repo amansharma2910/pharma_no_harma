@@ -2,6 +2,7 @@ import logging
 from openai import OpenAI
 from typing import Dict, Any, Optional
 from app.core.config import settings
+from prompts import medicine_summary_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -32,22 +33,8 @@ class PerplexityService:
             
             client = self._get_client()
             
-            # Create a comprehensive prompt for medicine information
-            prompt = f"""
-            The following is the medicine name: {medicine_name}
-            Provide a super-simplified, easy to understand layman's summary of the medicine '{medicine_name}' for patients to understand. 
-            Include the following information:
-            1. Generic name and common brand names
-            2. What it's used for (indications)
-            3. How it works (mechanism of action)
-            4. Common side effects
-            5. Important warnings and precautions
-            6. Drug interactions to be aware of
-            7. Dosage information (general guidance)
-            8. Storage instructions
-            
-            Format the response in a clear, structured manner suitable for patients. Keep it short and concise for non-medical people.
-            """
+            # Use the improved medicine summary prompt
+            prompt = f"{medicine_summary_prompt}\n\nMedicine: {medicine_name}"
             
             response = client.chat.completions.create(
                 model="perplexity/llama-3.1-sonar-small-128k-online",
@@ -126,15 +113,30 @@ class PerplexityService:
             return {"error": f"Failed to search medicine info: {str(e)}"}
     
     def _fallback_summary(self, medicine_name: str) -> str:
-        """Fallback summary when API is not available"""
+        """Fallback summary when API is not available - patient-friendly version"""
         return f"""
-        Medicine: {medicine_name}
-        
-        This is a fallback summary as the OpenRouter API is not available.
-        Please consult with your healthcare provider or pharmacist for accurate information about {medicine_name}.
-        
-        Important: Always consult with a healthcare professional before taking any medication.
-        """
+**{medicine_name.upper()}**
+
+**What you need to know:**
+• This is a medicine your doctor prescribed
+• Always take exactly as your doctor told you
+• Keep all your medicine appointments
+
+**IMPORTANT SAFETY:**
+• **Call your doctor if you feel worse**
+• **Call 911 if you have trouble breathing**
+• Tell your doctor about all other medicines you take
+• Keep this medicine away from children
+
+**What to do next:**
+• Talk to your pharmacist about this medicine
+• Ask your doctor any questions you have
+• Write down when you take your medicine
+
+**Storage:** Keep in a cool, dry place. Keep away from children.
+
+**Remember:** This is basic information. Your doctor and pharmacist know your specific situation best.
+"""
     
     async def close(self):
         """Close the client (no cleanup needed for OpenAI client)"""

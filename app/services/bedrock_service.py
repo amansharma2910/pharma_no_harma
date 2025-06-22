@@ -7,6 +7,7 @@ import aioboto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from app.core.config import settings
 from app.models.schemas import AgentQuery, AgentResponse, SummaryRequest, SummaryResponse, SummaryType
+from prompts import layman_summary_prompt, doctor_summary_prompt, combined_summary_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -218,27 +219,19 @@ class BedrockService:
         )
     
     def _create_summary_prompt(self, request: SummaryRequest) -> str:
-        """Create appropriate prompt for summary generation"""
-        base_prompt = """You are a medical AI assistant. Summarize the following content appropriately.
-        
-        Content to summarize:
-        {content}
-        
-        Context: {context}
-        
-        """
-        
+        """Create appropriate prompt for summary generation using improved prompts"""
         if request.summary_type.value == "LAYMAN":
-            prompt = base_prompt + "Provide a simple, easy-to-understand summary for patients. Avoid medical jargon and explain concepts in plain language."
+            prompt = layman_summary_prompt
         elif request.summary_type.value == "DOCTOR":
-            prompt = base_prompt + "Provide a detailed medical summary for healthcare professionals. Include relevant medical terminology and clinical details."
+            prompt = doctor_summary_prompt
         else:  # BOTH
-            prompt = base_prompt + "Provide two summaries separated by '---': 1) A simple patient-friendly summary, 2) A detailed medical summary for professionals."
+            prompt = combined_summary_prompt
         
-        return prompt.format(
-            content=request.content[:8000],  # Limit content length
-            context=request.context or "Medical document"
-        )
+        # Add content and context
+        content = request.content[:8000]  # Limit content length
+        context = request.context or "Medical document"
+        
+        return f"{prompt}\n\nContent to summarize:\n{content}\n\nContext: {context}"
     
     def _parse_agent_response(self, response_text: str, query: AgentQuery) -> AgentResponse:
         """Parse and structure the agent response"""

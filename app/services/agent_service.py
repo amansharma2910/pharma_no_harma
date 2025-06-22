@@ -7,6 +7,8 @@ from app.services.bedrock_service import bedrock_service
 from app.services.bedrock_neo4j_service import bedrock_neo4j_service
 from openai import AsyncOpenAI
 import json
+from app.services.neo4j_service import neo4j_service
+from prompts import layman_summary_prompt, doctor_summary_prompt, combined_summary_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -206,15 +208,13 @@ class AgentService:
                 return self._simple_summarize(request.content, request.summary_type)
     
     def _get_summary_prompt(self, summary_type: str, context: Optional[str] = None) -> str:
-        """Get appropriate prompt for summary type"""
-        base_prompt = "You are a medical AI assistant. Summarize the following content appropriately."
-        
+        """Get appropriate prompt for summary type using improved prompts"""
         if summary_type.value == "LAYMAN":
-            prompt = f"{base_prompt} Provide a simple, easy-to-understand summary for patients. Avoid medical jargon and explain concepts in plain language."
+            prompt = layman_summary_prompt
         elif summary_type.value == "DOCTOR":
-            prompt = f"{base_prompt} Provide a detailed medical summary for healthcare professionals. Include relevant medical terminology and clinical details."
+            prompt = doctor_summary_prompt
         else:  # BOTH
-            prompt = f"{base_prompt} Provide two summaries separated by '---': 1) A simple patient-friendly summary, 2) A detailed medical summary for professionals."
+            prompt = combined_summary_prompt
         
         if context:
             prompt += f"\n\nContext: {context}"
@@ -308,12 +308,40 @@ class AgentService:
     
     async def generate_summary_from_file_id(self, file_id: str, summary_type: SummaryType, context: Optional[str] = None) -> SummaryResponse:
         """Generate summary from file ID"""
-        # This would integrate with file service to get file content
-        # For now, return a placeholder
-        return SummaryResponse(
-            layman_summary=f"Summary for file {file_id}",
-            doctor_summary=f"Medical summary for file {file_id}"
-        )
+        try:
+            # Get file content from database
+            result = await neo4j_service.get_file_by_id(file_id)
+            if not result:
+                return SummaryResponse(
+                    layman_summary="File not found or could not be accessed.",
+                    doctor_summary="File not found or could not be accessed."
+                )
+            
+            file_info = result["f"]
+            content = file_info.get("parsed_content", "")
+            
+            if not content:
+                return SummaryResponse(
+                    layman_summary="No content available for this file. The file may not have been processed yet.",
+                    doctor_summary="No content available for this file. The file may not have been processed yet."
+                )
+            
+            # Create summary request with the file content
+            summary_request = SummaryRequest(
+                content=content,
+                summary_type=summary_type,
+                context=context or f"File: {file_info.get('filename', 'Unknown')}, Category: {file_info.get('category', 'Unknown')}"
+            )
+            
+            # Generate summary using the existing summary generation logic
+            return await self.generate_summary(summary_request)
+            
+        except Exception as e:
+            logger.error(f"Error generating summary from file ID {file_id}: {e}")
+            return SummaryResponse(
+                layman_summary=f"Error generating summary: {str(e)}",
+                doctor_summary=f"Error generating summary: {str(e)}"
+            )
 
 # Global instance
 agent_service = AgentService() 

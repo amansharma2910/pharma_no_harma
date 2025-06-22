@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     OPENROUTER_SITE_URL: Optional[str] = None
     OPENROUTER_SITE_NAME: Optional[str] = None
     
+    # Sarvam Translation Service
+    SARVAM_API_KEY: Optional[str] = None
+    
     # AWS Bedrock Configuration
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
