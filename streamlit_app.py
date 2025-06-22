@@ -464,7 +464,8 @@ def show_dashboard():
                     I can help you with:<br>
                     • Viewing your medical history and records<br>
                     • Finding specific health information<br>
-                    • Getting medication details<br>
+                    • Getting medication details and prescriptions<br>
+                    • Searching for drug information and side effects<br>
                     • Generating health summaries<br>
                     • Answering questions about your health data<br><br>
                     Choose an example query from the sidebar or type your own question below!
@@ -651,6 +652,7 @@ def show_dashboard():
         • Mention time periods (e.g., "last month")
         • Ask follow-up questions for details
         • Use medical terms if you know them
+        • Ask about specific drugs (e.g., "Tell me about Aspirin")
         • Summaries are automatically translated to your preferred language
         """)
 
@@ -725,6 +727,14 @@ def get_dashboard_example_queries() -> dict:
             "When was my last appointment?",
             "What are my allergies?",
             "Show me my lab test results"
+        ],
+        "💊 Drug Information": [
+            "Tell me about Aspirin",
+            "What is Metformin used for?",
+            "Side effects of Ibuprofen",
+            "Information about Lisinopril",
+            "What are the details of Omeprazole?",
+            "Tell me about Paracetamol"
         ]
     }
 
