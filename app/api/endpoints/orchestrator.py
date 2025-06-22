@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import Dict, Any, Optional
 from app.services.orchestrator_agent import orchestrator_agent
-from app.models.schemas import AgentQuery, AgentResponse, UserType
+from app.models.schemas import AgentQuery, AgentResponse, UserType, AuditAction
 from app.services.audit_service import audit_service
 from app.core.config import settings
 import logging
@@ -31,7 +31,7 @@ async def process_natural_language_query(query: AgentQuery, request: Request):
         await audit_service.log_action(
             user_id=query.user_id,
             user_name=f"User {query.user_id}",
-            action="ORCHESTRATOR_QUERY",
+            action=AuditAction.READ,
             resource_type="agent_query",
             resource_id=f"query_{query.user_id}_{query.query[:50]}",
             ip_address=request.client.host,
@@ -46,7 +46,7 @@ async def process_natural_language_query(query: AgentQuery, request: Request):
         await audit_service.log_action(
             user_id=query.user_id,
             user_name=f"User {query.user_id}",
-            action="ORCHESTRATOR_RESPONSE",
+            action=AuditAction.CREATE,
             resource_type="agent_response",
             resource_id=f"response_{query.user_id}_{query.query[:50]}",
             ip_address=request.client.host,

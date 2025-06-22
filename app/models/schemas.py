@@ -301,6 +301,7 @@ class AgentQuery(BaseModel):
     health_record_id: Optional[str] = None
     user_id: str
     user_type: UserType
+    preferred_language: Optional[str] = "en-IN"  # Default to English
 
 class AgentResponse(BaseModel):
     response: str

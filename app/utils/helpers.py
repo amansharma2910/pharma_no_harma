@@ -266,4 +266,27 @@ def calculate_medication_compliance(medications: List[Dict[str, Any]]) -> Dict[s
         "active_medications": active,
         "compliance_rate": compliance_rate,
         "overdue_medications": overdue
-    } 
+    }
+
+def convert_neo4j_dates(data: Any) -> Any:
+    """Convert Neo4j date/time objects to Python native types"""
+    if hasattr(data, '__dict__'):
+        # Handle Neo4j objects
+        if hasattr(data, 'year') and hasattr(data, 'month') and hasattr(data, 'day'):
+            # Neo4j Date object
+            return date(data.year, data.month, data.day)
+        elif hasattr(data, 'year') and hasattr(data, 'month') and hasattr(data, 'day') and hasattr(data, 'hour'):
+            # Neo4j DateTime object
+            return datetime(
+                data.year, data.month, data.day, 
+                data.hour, data.minute, data.second, 
+                data.nanosecond // 1000000 if hasattr(data, 'nanosecond') else 0,
+                tzinfo=getattr(data, 'tzinfo', None)
+            )
+    
+    if isinstance(data, dict):
+        return {key: convert_neo4j_dates(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [convert_neo4j_dates(item) for item in data]
+    else:
+        return data 

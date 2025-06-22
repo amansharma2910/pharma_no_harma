@@ -1,12 +1,10 @@
 import logging
 from typing import Dict, Any, Optional, List, Union
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.tools import tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 import json
 import asyncio
@@ -20,7 +18,9 @@ from app.services.neo4j_service import neo4j_service
 from app.services.agent_service import agent_service
 from app.services.file_service import file_service
 from app.services.audit_service import audit_service
+from app.services.sarvam_translation_service import sarvam_translation_service
 from app.core.config import settings
+from app.utils.helpers import convert_neo4j_dates
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +43,12 @@ class AgentState(BaseModel):
     suggested_actions: List[str] = Field(default_factory=list)
     error: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
+    preferred_language: str = "en-IN"
 
 # =============================================================================
 # TOOL DEFINITIONS
 # =============================================================================
 
-@tool
 async def get_medical_history_report(user_id: str, date_from: Optional[str] = None, date_to: Optional[str] = None) -> Dict[str, Any]:
     """Generate a complete medical history report for a patient"""
     try:
@@ -61,10 +61,14 @@ async def get_medical_history_report(user_id: str, date_from: Optional[str] = No
             
         health_records = await neo4j_service.list_health_records(filters, skip=0, limit=1000)
         
+        # Convert Neo4j date/time objects to Python native types
+        health_records = convert_neo4j_dates(health_records)
+        
         # Get all files for each health record
         all_files = []
-        for record in health_records["health_records"]:
-            files = await neo4j_service.list_files(record["id"], {}, skip=0, limit=1000)
+        for record in health_records["records"]:
+            files = await neo4j_service.list_files(record["hr"]["id"], {}, skip=0, limit=1000)
+            files = convert_neo4j_dates(files)
             all_files.extend(files["files"])
         
         # Sort by date
@@ -73,7 +77,7 @@ async def get_medical_history_report(user_id: str, date_from: Optional[str] = No
         # Generate comprehensive summary
         summary_request = SummaryRequest(
             content=json.dumps({
-                "health_records": health_records["health_records"],
+                "health_records": health_records["records"],
                 "files": all_files
             }, default=str),
             summary_type=SummaryType.BOTH,
@@ -84,11 +88,11 @@ async def get_medical_history_report(user_id: str, date_from: Optional[str] = No
         
         return {
             "success": True,
-            "health_records_count": len(health_records["health_records"]),
+            "health_records_count": len(health_records["records"]),
             "files_count": len(all_files),
             "summary": summary.model_dump(),
             "data": {
-                "health_records": health_records["health_records"],
+                "health_records": health_records["records"],
                 "files": all_files
             }
         }
@@ -96,7 +100,6 @@ async def get_medical_history_report(user_id: str, date_from: Optional[str] = No
         logger.error(f"Error generating medical history report: {e}")
         return {"success": False, "error": str(e)}
 
-@tool
 async def query_medical_record(health_record_id: str, user_id: str, query: str) -> Dict[str, Any]:
     """Query a specific medical record for detailed information"""
     try:
@@ -105,8 +108,12 @@ async def query_medical_record(health_record_id: str, user_id: str, query: str) 
         if not health_record:
             return {"success": False, "error": "Health record not found"}
         
+        # Convert Neo4j date/time objects to Python native types
+        health_record = convert_neo4j_dates(health_record)
+        
         # Get all files for this record
         files = await neo4j_service.list_files(health_record_id, {}, skip=0, limit=1000)
+        files = convert_neo4j_dates(files)
         
         # Create a detailed query context
         context = {
@@ -136,7 +143,6 @@ async def query_medical_record(health_record_id: str, user_id: str, query: str) 
         logger.error(f"Error querying medical record: {e}")
         return {"success": False, "error": str(e)}
 
-@tool
 async def get_latest_prescription(user_id: str) -> Dict[str, Any]:
     """Get the latest medical prescription for a patient"""
     try:
@@ -144,13 +150,17 @@ async def get_latest_prescription(user_id: str) -> Dict[str, Any]:
         filters = {"patient_id": user_id}
         health_records = await neo4j_service.list_health_records(filters, skip=0, limit=1000)
         
+        # Convert Neo4j date/time objects to Python native types
+        health_records = convert_neo4j_dates(health_records)
+        
         # Get medications from all health records
         all_medications = []
-        for record in health_records["health_records"]:
-            medications = await neo4j_service.get_medications(record["id"])
+        for record in health_records["records"]:
+            medications = await neo4j_service.get_medications(record["hr"]["id"])
+            medications = convert_neo4j_dates(medications)
             for med in medications:
-                med["health_record_id"] = record["id"]
-                med["health_record_title"] = record.get("title", "Unknown")
+                med["health_record_id"] = record["hr"]["id"]
+                med["health_record_title"] = record["hr"].get("title", "Unknown")
                 all_medications.append(med)
         
         # Sort by creation date and get the latest
@@ -178,15 +188,16 @@ async def get_latest_prescription(user_id: str) -> Dict[str, Any]:
         logger.error(f"Error getting latest prescription: {e}")
         return {"success": False, "error": str(e)}
 
-@tool
 async def search_health_records(query: str, user_id: str, user_type: str) -> Dict[str, Any]:
     """Search across all health records and files"""
     try:
         # Search in health records
         health_record_results = await neo4j_service.search_health_records(query, user_id, user_type)
+        health_record_results = convert_neo4j_dates(health_record_results)
         
         # Search in files
         file_results = await neo4j_service.search_files(query, user_id, user_type)
+        file_results = convert_neo4j_dates(file_results)
         
         return {
             "success": True,
@@ -198,7 +209,6 @@ async def search_health_records(query: str, user_id: str, user_type: str) -> Dic
         logger.error(f"Error searching health records: {e}")
         return {"success": False, "error": str(e)}
 
-@tool
 async def generate_health_summary(health_record_id: str, summary_type: str = "BOTH") -> Dict[str, Any]:
     """Generate a comprehensive health summary for a specific health record"""
     try:
@@ -209,7 +219,11 @@ async def generate_health_summary(health_record_id: str, summary_type: str = "BO
         if not health_record:
             return {"success": False, "error": "Health record not found"}
         
+        # Convert Neo4j date/time objects to Python native types
+        health_record = convert_neo4j_dates(health_record)
+        
         files = await neo4j_service.list_files(health_record_id, {}, skip=0, limit=1000)
+        files = convert_neo4j_dates(files)
         
         # Generate summary using the existing service
         summary = await agent_service.generate_summary_from_file_id(
@@ -225,6 +239,32 @@ async def generate_health_summary(health_record_id: str, summary_type: str = "BO
     except Exception as e:
         logger.error(f"Error generating health summary: {e}")
         return {"success": False, "error": str(e)}
+
+# =============================================================================
+# TRANSLATION HELPER FUNCTIONS
+# =============================================================================
+
+async def translate_summary_if_needed(summary: str, target_language: str = "en-IN", summary_type: str = "LAYMAN") -> str:
+    """Translate summary to target language if not English"""
+    if not summary or target_language == "en-IN":
+        return summary
+    
+    try:
+        # Use Sarvam translation service
+        result = sarvam_translation_service.translate_medical_summary(
+            summary=summary,
+            target_language=target_language,
+            summary_type=summary_type
+        )
+        
+        if result.get("success"):
+            return result.get("translated_text", summary)
+        else:
+            logger.warning(f"Translation failed: {result.get('error')}")
+            return summary
+    except Exception as e:
+        logger.error(f"Translation error: {e}")
+        return summary
 
 # =============================================================================
 # ORCHESTRATOR AGENT
@@ -364,8 +404,28 @@ class OrchestratorAgent:
                     if tool_name == "get_medical_history_report":
                         response_parts.append(f"📋 **Medical History Report Generated**\n\n")
                         response_parts.append(f"Found {result['health_records_count']} health records with {result['files_count']} files.\n\n")
-                        if result['summary'].get('layman_summary'):
-                            response_parts.append(f"**Summary:** {result['summary']['layman_summary']}")
+                        
+                        # Include both layman and doctor summaries if available
+                        summary = result.get('summary', {})
+                        if summary.get('layman_summary'):
+                            # Translate layman summary if needed
+                            translated_layman = await translate_summary_if_needed(
+                                summary['layman_summary'], 
+                                state.preferred_language, 
+                                "LAYMAN"
+                            )
+                            response_parts.append(f"**Patient Summary:**\n{translated_layman}\n\n")
+                        if summary.get('doctor_summary'):
+                            # Doctor summaries stay in English for medical accuracy
+                            response_parts.append(f"**Medical Summary:**\n{summary['doctor_summary']}\n\n")
+                        
+                        # If no structured summaries, try to display any summary content
+                        if not summary.get('layman_summary') and not summary.get('doctor_summary'):
+                            # Check if there's any summary content in other formats
+                            if isinstance(summary, dict):
+                                for key, value in summary.items():
+                                    if value and isinstance(value, str):
+                                        response_parts.append(f"**{key.replace('_', ' ').title()}:**\n{value}\n\n")
                     
                     elif tool_name == "get_latest_prescription":
                         if result.get('latest_prescription'):
@@ -391,7 +451,13 @@ class OrchestratorAgent:
                     elif tool_name == "generate_health_summary":
                         response_parts.append(f"📝 **Health Summary**\n\n")
                         if result['summary'].get('layman_summary'):
-                            response_parts.append(f"**Summary:** {result['summary']['layman_summary']}")
+                            # Translate health summary if needed
+                            translated_summary = await translate_summary_if_needed(
+                                result['summary']['layman_summary'],
+                                state.preferred_language,
+                                "LAYMAN"
+                            )
+                            response_parts.append(f"**Summary:** {translated_summary}")
                     
                     elif tool_name == "query_medical_record":
                         response_parts.append(f"📋 **Medical Record Query**\n\n")
@@ -422,7 +488,8 @@ class OrchestratorAgent:
                 user_query=query.query,
                 user_id=query.user_id,
                 user_type=query.user_type,
-                health_record_id=query.health_record_id
+                health_record_id=query.health_record_id,
+                preferred_language=query.preferred_language or "en-IN"
             )
             
             # Run the workflow

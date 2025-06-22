@@ -399,10 +399,20 @@ Create TWO summaries separated by "---" (three dashes):
 - Provide clear next steps for care
 - Use professional medical language
 
-## FORMAT:
-[LAYMAN SUMMARY HERE]
----
-[DOCTOR SUMMARY HERE]
+## FORMAT EXAMPLE:
+**Patient Summary:**
+Your blood test results show that your blood sugar is normal. Your red blood cell count is slightly high, which means you may need more tests. Keep taking your medications and schedule a follow-up visit with your doctor in 2 weeks.
 
-Now create both summaries for the following medical content:
+---
+
+**Medical Summary:**
+Patient: 23-year-old male
+- HbA1c: 5.6% (normal range)
+- Hemoglobin: 17.2 g/dL (elevated, ref: 13.0-17.0)
+- RBC: 6.01 million/cu.mm (elevated, ref: 4.5-5.5)
+- Consider polycythemia workup
+- Recommend follow-up in 2 weeks
+
+## YOUR TASK:
+Create TWO summaries following the above format for the following medical content:
 """ 

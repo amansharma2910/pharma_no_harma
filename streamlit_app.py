@@ -349,23 +349,37 @@ def translate_summary_if_needed(summary: str, target_language: str = None, summa
         return summary
     
     try:
-        result = st.session_state.api_client.translate_medical_summary(summary, target_language, summary_type)
+        response = requests.post(
+            f"{API_BASE_URL}/translation/translate-summary",
+            json={
+                "summary": summary,
+                "target_language": target_language,
+                "summary_type": summary_type
+            },
+            timeout=10
+        )
         
-        if result.get("success"):
-            translated_text = result.get("translated_summary", summary)
-            
-            # Show info if text was summarized for translation
-            if result.get("summarized_text"):
-                st.info("📝 Summary was condensed for translation to fit API limits")
-            
-            return translated_text
-        else:
-            error_msg = result.get('error', 'Unknown error')
-            if "not translated" in error_msg.lower():
-                st.info("📋 " + error_msg)
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("success"):
+                translated_text = result.get("translated_summary", summary)
+                
+                # Show info if text was summarized for translation
+                if result.get("summarized_text"):
+                    st.info("📝 Summary was condensed for translation to fit API limits")
+                
+                return translated_text
             else:
-                st.warning(f"Translation failed: {error_msg}")
+                error_msg = result.get('error', 'Unknown error')
+                if "not translated" in error_msg.lower():
+                    st.info("📋 " + error_msg)
+                else:
+                    st.warning(f"Translation failed: {error_msg}")
+                return summary
+        else:
+            st.warning(f"Translation API error: {response.status_code}")
             return summary
+            
     except Exception as e:
         st.error(f"Translation error: {str(e)}")
         return summary
@@ -425,31 +439,294 @@ def main():
         show_file_management()
 
 def show_dashboard():
-    """Dashboard page"""
-    st.markdown('<h2 class="section-header">📊 Dashboard</h2>', unsafe_allow_html=True)
+    """AI Chat Dashboard"""
+    st.markdown('<h2 class="section-header">🤖 AI Medical Assistant Chat</h2>', unsafe_allow_html=True)
     
-    # Display patient info
-    st.subheader("Patient Information")
-    display_user_info(FIXED_PATIENT, "Patient")
+    # Initialize chat history if not exists
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
     
-    # Quick stats
-    col1, col2, col3, col4 = st.columns(4)
+    # Chat interface layout
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.metric("Total Records", "Loading...")
+        # Chat display area
+        st.markdown("### 💬 Chat with AI Assistant")
+        
+        # Create chat container with custom styling
+        chat_container = st.container()
+        
+        with chat_container:
+            if not st.session_state.chat_history:
+                st.markdown("""
+                <div style="background-color: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+                    👋 <strong>Welcome to your AI Medical Assistant!</strong><br><br>
+                    I can help you with:<br>
+                    • Viewing your medical history and records<br>
+                    • Finding specific health information<br>
+                    • Getting medication details<br>
+                    • Generating health summaries<br>
+                    • Answering questions about your health data<br><br>
+                    Choose an example query from the sidebar or type your own question below!
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Display chat messages
+            for i, entry in enumerate(st.session_state.chat_history):
+                timestamp_str = entry["timestamp"].strftime("%H:%M")
+                
+                if entry["is_user"]:
+                    st.markdown(f"""
+                    <div style="background-color: #007bff; color: white; padding: 0.8rem 1rem; 
+                         border-radius: 18px 18px 4px 18px; margin: 0.5rem 0 0.5rem auto; 
+                         max-width: 70%; word-wrap: break-word;">
+                        {entry["message"]}
+                        <div style="font-size: 0.7rem; color: #e0e0e0; margin-top: 0.3rem;">
+                            You • {timestamp_str}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    # Format assistant response with metadata
+                    response_text = entry["message"]
+                    metadata = entry.get("metadata", {})
+                    
+                    # Add confidence and sources if available
+                    if metadata.get("confidence") is not None:
+                        confidence_percent = int(metadata["confidence"] * 100)
+                        confidence_emoji = "🟢" if confidence_percent >= 80 else "🟡" if confidence_percent >= 60 else "🔴"
+                        response_text += f"<br><br>{confidence_emoji} <strong>Confidence:</strong> {confidence_percent}%"
+                    
+                    if metadata.get("sources"):
+                        sources_text = ", ".join(metadata["sources"])
+                        response_text += f"<br>📚 <strong>Sources:</strong> {sources_text}"
+                    
+                    if metadata.get("suggested_actions"):
+                        actions_text = " • ".join(metadata["suggested_actions"])
+                        response_text += f"<br>💡 <strong>Suggested:</strong> {actions_text}"
+                    
+                    # Add language indicator if not English
+                    if st.session_state.get("preferred_language", "en-IN") != "en-IN":
+                        languages = get_language_options()
+                        lang_name = languages.get(st.session_state.preferred_language, "Unknown")
+                        response_text += f"<br>🌐 <strong>Language:</strong> {lang_name}"
+                    
+                    st.markdown(f"""
+                    <div style="background-color: #e9ecef; color: #333; padding: 0.8rem 1rem; 
+                         border-radius: 18px 18px 18px 4px; margin: 0.5rem auto 0.5rem 0; 
+                         max-width: 85%; word-wrap: break-word;">
+                        {response_text}
+                        <div style="font-size: 0.7rem; color: #6c757d; margin-top: 0.3rem;">
+                            AI Assistant • {timestamp_str}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # Chat input form
+        with st.form("chat_form", clear_on_submit=True):
+            user_input = st.text_area(
+                "Ask me anything about your medical records:",
+                placeholder="Type your question here... (e.g., 'What's my latest prescription?' or 'Show me my blood test results')",
+                height=100,
+                key="user_input"
+            )
+            
+            col_submit, col_clear = st.columns([3, 1])
+            with col_submit:
+                submitted = st.form_submit_button("Send Message", use_container_width=True)
+            with col_clear:
+                if st.form_submit_button("🗑️ Clear Chat"):
+                    st.session_state.chat_history = []
+                    st.rerun()
+        
+        # Handle form submission
+        if submitted and user_input.strip():
+            # Add user message to chat
+            add_message_to_chat(user_input.strip(), is_user=True)
+            
+            # Show loading indicator
+            with st.spinner("🤖 AI is analyzing your request..."):
+                # Query the orchestrator
+                result = query_orchestrator(user_input.strip())
+                
+                # Add assistant response to chat
+                metadata = {
+                    "confidence": result.get("confidence"),
+                    "sources": result.get("sources"),
+                    "suggested_actions": result.get("suggested_actions")
+                }
+                add_message_to_chat(result.get("response", "I couldn't process your request right now."), 
+                                  is_user=False, metadata=metadata)
+            
+            st.rerun()
     
     with col2:
-        st.metric("Active Records", "Loading...")
+        # Example queries sidebar
+        st.markdown("### 💡 Example Queries")
+        
+        example_queries = get_dashboard_example_queries()
+        
+        for category, queries in example_queries.items():
+            with st.expander(category, expanded=False):
+                for query in queries:
+                    if st.button(query, key=f"example_{hash(query)}", help="Click to use this query"):
+                        # Add user message
+                        add_message_to_chat(query, is_user=True)
+                        
+                        # Show loading message
+                        with st.spinner("AI is thinking..."):
+                            # Query orchestrator
+                            result = query_orchestrator(query)
+                            
+                            # Add assistant response
+                            metadata = {
+                                "confidence": result.get("confidence"),
+                                "sources": result.get("sources"),
+                                "suggested_actions": result.get("suggested_actions")
+                            }
+                            add_message_to_chat(result.get("response", "No response received"), 
+                                              is_user=False, metadata=metadata)
+                        
+                        st.rerun()
+        
+        # Quick stats
+        st.markdown("### 📊 Quick Stats")
+        try:
+            # Get health records count
+            health_records_response = requests.get(
+                f"{API_BASE_URL}/health-records",
+                params={"patient_id": FIXED_PATIENT["id"], "limit": 1}
+            )
+            if health_records_response.status_code == 200:
+                total_records = health_records_response.json().get("total", 0)
+                st.metric("Health Records", total_records)
+            else:
+                st.metric("Health Records", "N/A")
+        except:
+            st.metric("Health Records", "Error")
+        
+        # Chat stats
+        total_messages = len(st.session_state.chat_history)
+        user_messages = len([msg for msg in st.session_state.chat_history if msg["is_user"]])
+        st.metric("Chat Messages", f"{user_messages}/{total_messages}")
+        
+        # System status
+        st.markdown("### 🚀 System Status")
+        try:
+            response = requests.get(f"{API_BASE_URL}/health", timeout=3)
+            if response.status_code == 200:
+                st.success("✅ Backend Connected")
+            else:
+                st.error("❌ Backend Issues")
+        except:
+            st.error("❌ Backend Offline")
+        
+        try:
+            response = requests.get(f"{API_BASE_URL}/api/v1/orchestrator/status", timeout=3)
+            if response.status_code == 200:
+                status_data = response.json()
+                if status_data.get("status") == "healthy":
+                    st.success("🤖 AI Assistant Ready")
+                    st.caption(f"Tools: {status_data.get('available_tools', 'N/A')}")
+                else:
+                    st.warning("⚠️ AI Assistant Issues")
+            else:
+                st.error("❌ AI Assistant Offline")
+        except:
+            st.error("❌ AI Assistant Unreachable")
+        
+        # Language Settings
+        st.markdown("### 🌐 Language Settings")
+        languages = get_language_options()
+        current_language_name = languages.get(st.session_state.preferred_language, "English")
+        
+        st.info(f"**Current Language:** {current_language_name}")
+        st.caption("ℹ️ Summaries will be generated in your preferred language. Change language in the sidebar.")
+        
+        # Pro tips
+        st.markdown("### 💡 Pro Tips")
+        st.info("""
+        **Get better responses:**
+        • Be specific about what you want to know
+        • Mention time periods (e.g., "last month")
+        • Ask follow-up questions for details
+        • Use medical terms if you know them
+        • Summaries are automatically translated to your preferred language
+        """)
+
+def add_message_to_chat(message: str, is_user: bool, metadata: dict = None):
+    """Add a message to chat history"""
+    chat_entry = {
+        "message": message,
+        "is_user": is_user,
+        "timestamp": datetime.now(),
+        "metadata": metadata or {}
+    }
+    st.session_state.chat_history.append(chat_entry)
+
+def query_orchestrator(user_query: str) -> dict:
+    """Send query to orchestrator agent"""
+    try:
+        # Get user's preferred language from session state
+        preferred_language = st.session_state.get("preferred_language", "en-IN")
+        
+        payload = {
+            "query": user_query,
+            "user_id": FIXED_PATIENT["id"],
+            "user_type": FIXED_PATIENT["user_type"],
+            "health_record_id": None,  # Optional
+            "preferred_language": preferred_language
+        }
+        
+        response = requests.post(f"{API_BASE_URL}/api/v1/orchestrator/query", json=payload)
+        response.raise_for_status()
+        return response.json()
     
-    with col3:
-        st.metric("Files Processed", "Loading...")
-    
-    with col4:
-        st.metric("AI Summaries", "Loading...")
-    
-    # Recent activity
-    st.markdown('<h3 class="section-header">Recent Activity</h3>', unsafe_allow_html=True)
-    st.info("Dashboard features coming soon...")
+    except requests.exceptions.RequestException as e:
+        return {
+            "response": f"❌ **Connection Error**\n\nCouldn't connect to the AI assistant. Please make sure the backend server is running.\n\nError: {str(e)}",
+            "confidence": 0.0,
+            "sources": [],
+            "suggested_actions": ["Check server connection", "Try again later"],
+            "cypher_queries_executed": []
+        }
+
+def get_dashboard_example_queries() -> dict:
+    """Get example queries organized by category"""
+    return {
+        "📋 Medical History": [
+            "Give me my complete medical history report",
+            "Show me all my health records",
+            "Generate a comprehensive medical timeline",
+            "What's my medical background summary?"
+        ],
+        "💊 Medications & Prescriptions": [
+            "What's my latest prescription?",
+            "Show me my current medications",
+            "What medications am I taking?",
+            "Get my most recent medicine prescription"
+        ],
+        "🔍 Search & Find": [
+            "Search for diabetes-related records",
+            "Find all records about my heart condition",
+            "Look for my blood test results",
+            "Search for appointment records from last month"
+        ],
+        "📝 Summaries & Reports": [
+            "Generate a summary of my health record",
+            "Give me an overview of my medical condition",
+            "Summarize my latest health checkup",
+            "Create a summary of my treatment plan"
+        ],
+        "🩺 Specific Health Questions": [
+            "What were my blood pressure readings?",
+            "Show me my vaccination records",
+            "What was my last diagnosis?",
+            "When was my last appointment?",
+            "What are my allergies?",
+            "Show me my lab test results"
+        ]
+    }
 
 def show_create_medical_record():
     """Create medical record page"""
@@ -549,7 +826,8 @@ def show_upload_files():
         # Show layman summary if available
         if selected_record.get("layman_summary"):
             st.markdown("**Layman Summary:**")
-            st.info(selected_record["layman_summary"])
+            translated_summary = translate_summary_if_needed(selected_record["layman_summary"])
+            st.info(translated_summary)
         else:
             st.info("No layman summary available for this record.")
         
@@ -575,10 +853,11 @@ def show_upload_files():
                         st.markdown(f"**Doctor:** {record['doctor']['name']}")
                         st.markdown(f"**Specialization:** {record['doctor']['specialization']}")
                 
-                # Show layman summary if available
+                                # Show layman summary if available
                 if record.get("layman_summary"):
                     st.markdown("**Layman Summary:**")
-                    st.info(record["layman_summary"])
+                    translated_summary = translate_summary_if_needed(record["layman_summary"])
+                    st.info(translated_summary)
                 else:
                     st.info("No layman summary available for this record.")
                 
