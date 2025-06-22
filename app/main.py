@@ -27,6 +27,7 @@ from app.services.neo4j_service import neo4j_service
 from app.services.agent_service import agent_service
 from app.services.file_service import file_service
 from app.services.audit_service import audit_service
+from app.services.sarvam_translation_service import sarvam_translation_service
 from app.core.config import settings
 
 # Import Bedrock router
@@ -327,6 +328,10 @@ async def get_health_record(health_record_id: str, request: Request):
                     med = med_data["medication"]
                     medications.append(Medication(**med))
         
+        # Remove medications from hr data to avoid duplicate keyword argument
+        hr_data = result["hr"].copy()
+        hr_data.pop("medications", None)
+        
         # Log audit entry
         await audit_service.log_action(
             user_id="system",  # Could be enhanced to get actual user
@@ -342,7 +347,7 @@ async def get_health_record(health_record_id: str, request: Request):
             success=True,
             message="Health record retrieved successfully",
             data=HealthRecordResponse(
-                **result["hr"],
+                **hr_data,
                 patient=UserResponse(**result["patient"]),
                 doctor=UserResponse(**result["doctor"]),
                 medications=medications
@@ -994,6 +999,143 @@ async def list_medications(
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/health-records/{health_record_id}/generate-summary", response_model=SummaryResponse)
+async def generate_health_record_summary(
+    health_record_id: str, 
+    summary_type: SummaryType = SummaryType.BOTH,
+    context: Optional[str] = None,
+    request: Request = None
+):
+    """Generate comprehensive summary for entire health record based on all files"""
+    try:
+        # Get health record with all files
+        result = await neo4j_service.get_health_record_by_id(health_record_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Health record not found")
+        
+        # Get all files for this health record
+        files_result = await neo4j_service.list_files(health_record_id, {}, 0, 1000)
+        
+        # Collect all content for summary generation
+        all_content = []
+        health_record_info = result["hr"]
+        
+        # Add health record basic info
+        all_content.append(f"Health Record: {health_record_info['title']}")
+        all_content.append(f"Ailment: {health_record_info['ailment']}")
+        all_content.append(f"Status: {health_record_info['status']}")
+        all_content.append(f"Record Created: {health_record_info['created_at']}")
+        all_content.append(f"Last Updated: {health_record_info['updated_at']}")
+        
+        # Add existing summaries if available
+        if health_record_info.get("layman_summary"):
+            all_content.append(f"Current Layman Summary: {health_record_info['layman_summary']}")
+        if health_record_info.get("medical_summary"):
+            all_content.append(f"Current Medical Summary: {health_record_info['medical_summary']}")
+        
+        # Collect files with their timestamps for chronological ordering
+        file_entries = []
+        for file_data in files_result["files"]:
+            file_info = file_data["f"]
+            created_at = file_info.get("created_at", "")
+            
+            # Use doctor summary if available, otherwise use layman summary as fallback
+            file_summary = file_info.get("doctor_summary") or file_info.get("layman_summary") or "No summary available"
+            
+            file_entries.append({
+                "timestamp": created_at,
+                "filename": file_info['filename'],
+                "category": file_info['category'],
+                "summary": file_summary,
+                "description": file_info.get("description", "")
+            })
+        
+        # Sort files by creation date (ascending order - oldest first)
+        def get_sortable_timestamp(entry):
+            timestamp = entry["timestamp"]
+            if timestamp:
+                if hasattr(timestamp, 'to_native'):
+                    # Neo4j DateTime object
+                    return timestamp.to_native()
+                elif hasattr(timestamp, 'strftime'):
+                    # Python datetime object
+                    return timestamp
+                else:
+                    # String or other format
+                    return str(timestamp)
+            else:
+                # Put entries without timestamp at the end
+                return "9999-12-31"
+        
+        file_entries.sort(key=get_sortable_timestamp)
+        
+        # Build chronological medical timeline
+        all_content.append("\n=== MEDICAL TIMELINE ===")
+        
+        for i, file_entry in enumerate(file_entries, 1):
+            # Handle Neo4j DateTime object properly
+            timestamp = file_entry["timestamp"]
+            if timestamp:
+                # Convert Neo4j DateTime to string and extract date part
+                if hasattr(timestamp, 'strftime'):
+                    # It's a Python datetime object
+                    date_str = timestamp.strftime('%Y-%m-%d')
+                elif hasattr(timestamp, 'to_native'):
+                    # It's a Neo4j DateTime object
+                    native_dt = timestamp.to_native()
+                    date_str = native_dt.strftime('%Y-%m-%d')
+                else:
+                    # Try string conversion
+                    date_str = str(timestamp)[:10]
+            else:
+                date_str = "Unknown Date"
+                
+            all_content.append(f"\n{i}. {date_str} - {file_entry['category']}: {file_entry['filename']}")
+            if file_entry["description"]:
+                all_content.append(f"   Description: {file_entry['description']}")
+            all_content.append(f"   Summary: {file_entry['summary']}")
+        
+        # Generate comprehensive summary
+        combined_content = "\n\n".join(all_content)
+        
+        # Create summary request
+        summary_request = SummaryRequest(
+            content=combined_content,
+            summary_type=summary_type,
+            context=context or f"Comprehensive summary of health record: {health_record_info['title']} - Medical timeline with {len(file_entries)} events"
+        )
+        
+        # Generate summary using agent service
+        summary_response = await agent_service.generate_summary(summary_request)
+        
+        # Update health record with new summaries
+        update_data = {}
+        if summary_response.layman_summary:
+            update_data["layman_summary"] = summary_response.layman_summary
+        if summary_response.doctor_summary:
+            update_data["medical_summary"] = summary_response.doctor_summary
+        
+        if update_data:
+            await neo4j_service.update_health_record(health_record_id, update_data)
+        
+        # Log audit entry
+        if request:
+            await audit_service.log_action(
+                user_id="system",
+                user_name="System",
+                action=AuditAction.UPDATE,
+                resource_type="health_record_summary",
+                resource_id=health_record_id,
+                ip_address=request.client.host,
+                user_agent=request.headers.get("user-agent")
+            )
+        
+        return summary_response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/medicines/{medicine_name}/summary")
 async def get_medicine_summary(medicine_name: str):
     """Get comprehensive medicine summary using Perplexity AI"""
@@ -1129,6 +1271,268 @@ async def health_check():
             file_processing_available=False,
             timestamp=datetime.now()
         )
+
+# =============================================================================
+# TRANSLATION ENDPOINTS
+# =============================================================================
+
+@app.get("/translation/languages")
+async def get_supported_languages():
+    """Get list of supported languages for translation"""
+    try:
+        languages = sarvam_translation_service.get_supported_languages()
+        return {
+            "success": True,
+            "languages": languages,
+            "total": len(languages)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/translation/translate")
+async def translate_text(request: Request):
+    """Translate text to target language"""
+    try:
+        body = await request.json()
+        text = body.get("text")
+        target_language = body.get("target_language")
+        source_language = body.get("source_language", "auto")
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="Text is required")
+        
+        if not target_language:
+            raise HTTPException(status_code=400, detail="Target language is required")
+        
+        if not sarvam_translation_service.is_language_supported(target_language):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unsupported target language: {target_language}"
+            )
+        
+        result = sarvam_translation_service.translate_text(text, target_language, source_language)
+        
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result["error"])
+        
+        return {
+            "success": True,
+            "translated_text": result["translated_text"],
+            "original_text": result["original_text"],
+            "source_language": result["source_language"],
+            "target_language": result["target_language"],
+            "target_language_name": result["target_language_name"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/translation/translate-summary")
+async def translate_medical_summary(request: Request):
+    """Translate medical summary to target language"""
+    try:
+        body = await request.json()
+        summary = body.get("summary")
+        target_language = body.get("target_language")
+        summary_type = body.get("summary_type", "LAYMAN")  # Default to LAYMAN
+        
+        if not summary:
+            raise HTTPException(status_code=400, detail="Summary is required")
+        
+        if not target_language:
+            raise HTTPException(status_code=400, detail="Target language is required")
+        
+        if not sarvam_translation_service.is_language_supported(target_language):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unsupported target language: {target_language}"
+            )
+        
+        result = sarvam_translation_service.translate_medical_summary(summary, target_language, summary_type)
+        
+        if not result["success"]:
+            # If it's a doctor summary, return a specific message
+            if summary_type == "DOCTOR":
+                return {
+                    "success": False,
+                    "error": "Doctor summaries are not translated to preserve medical accuracy",
+                    "original_summary": summary,
+                    "target_language": target_language,
+                    "summary_type": summary_type
+                }
+            else:
+                raise HTTPException(status_code=500, detail=result["error"])
+        
+        return {
+            "success": True,
+            "translated_summary": result["translated_text"],
+            "original_summary": result["original_text"],
+            "summarized_text": result.get("summarized_text"),
+            "target_language": result["target_language"],
+            "target_language_name": result["target_language_name"],
+            "summary_type": result["summary_type"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/files/{file_id}/translate-summary")
+async def translate_file_summary(
+    file_id: str, 
+    target_language: str,
+    summary_type: SummaryType = SummaryType.LAYMAN,
+    request: Request = None
+):
+    """Translate file summary to target language"""
+    try:
+        # Get file and its summary
+        result = await neo4j_service.get_file_by_id(file_id)
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        file_info = result["f"]
+        
+        # Get the appropriate summary based on type
+        if summary_type == SummaryType.LAYMAN:
+            summary = file_info.get("layman_summary")
+        elif summary_type == SummaryType.DOCTOR:
+            summary = file_info.get("doctor_summary")
+        else:
+            # For BOTH, use layman summary as default for translation
+            summary = file_info.get("layman_summary") or file_info.get("doctor_summary")
+        
+        if not summary:
+            raise HTTPException(status_code=404, detail="Summary not found for this file")
+        
+        # Translate the summary
+        translation_result = sarvam_translation_service.translate_medical_summary(
+            summary, target_language, summary_type.value
+        )
+        
+        if not translation_result["success"]:
+            # If it's a doctor summary, return a specific message
+            if summary_type == SummaryType.DOCTOR:
+                return {
+                    "success": False,
+                    "error": "Doctor summaries are not translated to preserve medical accuracy",
+                    "file_id": file_id,
+                    "filename": file_info["filename"],
+                    "original_summary": summary,
+                    "target_language": target_language,
+                    "summary_type": summary_type.value
+                }
+            else:
+                raise HTTPException(status_code=500, detail=translation_result["error"])
+        
+        # Log audit entry
+        await audit_service.log_action(
+            user_id="system",
+            user_name="System",
+            action=AuditAction.READ,
+            resource_type="file_summary_translation",
+            resource_id=file_id,
+            ip_address=request.client.host if request else "system",
+            user_agent=request.headers.get("user-agent") if request else "system"
+        )
+        
+        return {
+            "success": True,
+            "file_id": file_id,
+            "filename": file_info["filename"],
+            "original_summary": summary,
+            "translated_summary": translation_result["translated_text"],
+            "summarized_text": translation_result.get("summarized_text"),
+            "target_language": target_language,
+            "target_language_name": translation_result["target_language_name"],
+            "summary_type": summary_type.value
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/health-records/{health_record_id}/translate-summary")
+async def translate_health_record_summary(
+    health_record_id: str, 
+    target_language: str,
+    summary_type: SummaryType = SummaryType.LAYMAN,
+    request: Request = None
+):
+    """Translate health record summary to target language"""
+    try:
+        # Get health record and its summary
+        result = await neo4j_service.get_health_record_by_id(health_record_id)
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="Health record not found")
+        
+        health_record_info = result["hr"]
+        
+        # Get the appropriate summary based on type
+        if summary_type == SummaryType.LAYMAN:
+            summary = health_record_info.get("layman_summary")
+        elif summary_type == SummaryType.DOCTOR:
+            summary = health_record_info.get("medical_summary")
+        else:
+            # For BOTH, use layman summary as default for translation
+            summary = health_record_info.get("layman_summary") or health_record_info.get("medical_summary")
+        
+        if not summary:
+            raise HTTPException(status_code=404, detail="Summary not found for this health record")
+        
+        # Translate the summary
+        translation_result = sarvam_translation_service.translate_medical_summary(
+            summary, target_language, summary_type.value
+        )
+        
+        if not translation_result["success"]:
+            # If it's a doctor summary, return a specific message
+            if summary_type == SummaryType.DOCTOR:
+                return {
+                    "success": False,
+                    "error": "Doctor summaries are not translated to preserve medical accuracy",
+                    "health_record_id": health_record_id,
+                    "title": health_record_info["title"],
+                    "original_summary": summary,
+                    "target_language": target_language,
+                    "summary_type": summary_type.value
+                }
+            else:
+                raise HTTPException(status_code=500, detail=translation_result["error"])
+        
+        # Log audit entry
+        await audit_service.log_action(
+            user_id="system",
+            user_name="System",
+            action=AuditAction.READ,
+            resource_type="health_record_summary_translation",
+            resource_id=health_record_id,
+            ip_address=request.client.host if request else "system",
+            user_agent=request.headers.get("user-agent") if request else "system"
+        )
+        
+        return {
+            "success": True,
+            "health_record_id": health_record_id,
+            "title": health_record_info["title"],
+            "original_summary": summary,
+            "translated_summary": translation_result["translated_text"],
+            "summarized_text": translation_result.get("summarized_text"),
+            "target_language": target_language,
+            "target_language_name": translation_result["target_language_name"],
+            "summary_type": summary_type.value
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # =============================================================================
 # ERROR HANDLERS
