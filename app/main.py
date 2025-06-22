@@ -32,6 +32,8 @@ from app.core.config import settings
 
 # Import Bedrock router
 from app.api.endpoints.bedrock import router as bedrock_router
+# Import Orchestrator router
+from app.api.endpoints.orchestrator import router as orchestrator_router
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +98,9 @@ app.add_middleware(
 
 # Include Bedrock router
 app.include_router(bedrock_router, prefix="/api/v1", tags=["AWS Bedrock"])
+
+# Include Orchestrator router
+app.include_router(orchestrator_router, prefix="/api/v1", tags=["Orchestrator Agent"])
 
 # =============================================================================
 # USER ENDPOINTS
