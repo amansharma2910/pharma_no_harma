@@ -1,318 +1,325 @@
-# Health Records Management System
+# 🏥 PharmaNoHarma
+**Breaking Language Barriers in Healthcare with AI-Powered Medical Records**
 
-A comprehensive FastAPI-based health records management system with AI-powered features using AWS Bedrock and Neo4j graph database.
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://yourusername.github.io/pharma_no_harma)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Modern%20API-green)](https://fastapi.tiangolo.com)
+[![AI Powered](https://img.shields.io/badge/AI-Powered-purple)](https://aws.amazon.com/bedrock/)
+[![Multi-Language](https://img.shields.io/badge/Languages-11+-orange)](https://sarvam.ai/)
 
-## Features
+---
 
-- **Health Records Management**: Complete CRUD operations for patient records
-- **AI-Powered Queries**: Natural language processing with AWS Bedrock
-- **Neo4j Integration**: Graph database for complex health data relationships
-- **Document Processing**: AI-powered document parsing and summarization
-- **Export Functionality**: PDF generation and data export
-- **Background Tasks**: Asynchronous processing with Celery
-- **RESTful API**: Comprehensive API with automatic documentation
+## 🎯 What Problem Does PharmaNoHarma Solve?
 
-## Tech Stack
+### The Healthcare Communication Crisis
+Millions of patients in India struggle to understand their medical information due to:
 
-- **Backend**: FastAPI, Python 3.8+
-- **Database**: Neo4j (Graph Database)
-- **AI Services**: AWS Bedrock (Claude, Titan, Llama)
-- **Task Queue**: Celery with Redis
-- **Document Processing**: LlamaParse
-- **Export**: ReportLab for PDF generation
+- **🌐 Language Barriers**: Medical records are primarily in English, but patients speak 22+ official languages
+- **📋 Complex Medical Jargon**: Technical terminology confuses patients about their health conditions
+- **🤝 Communication Gaps**: Language differences lead to misunderstood diagnoses and poor treatment compliance
 
-## Quick Start
+### Our Solution
+PharmaNoHarma transforms healthcare accessibility by providing:
+- **AI-powered medical summaries** in patient-friendly language
+- **Multi-language support** for 11+ Indian languages
+- **Intelligent chat assistant** for medical queries
+- **Smart document processing** for medical files
 
-### Prerequisites
+---
 
+## ✨ Key Features
+
+### 🤖 AI Medical Assistant
+Intelligent chat interface that helps patients understand their medical records, medications, and health information through natural language conversations.
+
+### 🌍 Multi-Language Support
+- Supports 11+ Indian languages (Hindi, Tamil, Telugu, Bengali, and more)
+- Automatic translation of medical summaries
+- Real-time language switching
+
+### 📋 Dual Summary System
+- **Patient-Friendly Summaries**: Complex medical information explained in simple terms
+- **Medical Summaries**: Detailed clinical information for healthcare providers
+
+### 📁 Smart Document Processing
+- AI-powered analysis of medical documents, lab reports, prescriptions
+- Automatic categorization and summary generation
+- Support for PDF, DOCX, images, and more
+
+### 💊 Medicine Information Database
+- Comprehensive drug information lookup
+- Side effects and usage instructions
+- Available in multiple languages
+
+### 🔒 Privacy & Security
+- Enterprise-grade security
+- Data encryption and privacy controls
+- HIPAA-compliant architecture
+
+---
+
+## 🚀 Quick Start
+
+### For End Users
+
+1. **Access the Web Interface**:
+   ```bash
+   # Clone and run the application
+   git clone https://github.com/yourusername/pharma_no_harma.git
+   cd pharma_no_harma
+   pip install -r requirements.txt
+   streamlit run streamlit_app.py
+   ```
+
+2. **Open your browser** to `http://localhost:8501`
+
+3. **Start using the features**:
+   - Upload medical documents
+   - Chat with the AI assistant
+   - Set your preferred language
+   - View translated summaries
+
+### For Developers
+
+<details>
+<summary>🔧 Development Setup</summary>
+
+#### Prerequisites
 - Python 3.8+
 - Neo4j Database
 - AWS Account with Bedrock access
 - Redis (for background tasks)
 
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd pharma_no_harma
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment**:
-   ```bash
-   cp env.example .env
-   # Edit .env with your configuration
-   ```
-
-4. **Configure Neo4j**:
-   - Start Neo4j database
-   - Update connection details in `.env`
-
-5. **Configure AWS Bedrock**:
-   ```bash
-   python setup_bedrock.py
-   ```
-
-6. **Start the application**:
-   ```bash
-   python run.py
-   ```
-
-The API will be available at `http://localhost:8000`
-
-## AWS Bedrock Integration
-
-The system integrates AWS Bedrock with your existing Neo4j knowledge graph for intelligent, context-aware health record queries.
-
-### Key Benefits
-
-- **Leverages Existing Data**: Uses your current Neo4j knowledge graph
-- **Complex Relationships**: Exploits graph relationships for better context
-- **Real-time Access**: Always up-to-date with latest data
-- **No Data Duplication**: No need for separate knowledge base
-
-### Setup
-
-1. **Configure AWS Credentials**:
-   ```bash
-   aws configure
-   # Or set environment variables
-   export AWS_ACCESS_KEY_ID=your_key
-   export AWS_SECRET_ACCESS_KEY=your_secret
-   export AWS_REGION=us-east-1
-   ```
-
-2. **Enable Bedrock Models**:
-   - Go to AWS Bedrock Console
-   - Request access to desired models (Claude, Titan, Llama)
-
-3. **Run Setup Script**:
-   ```bash
-   python setup_bedrock.py
-   ```
-
-### Usage Examples
-
+#### Installation
 ```bash
-# Basic query with Bedrock
-curl -X POST "http://localhost:8000/api/v1/bedrock/query" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What are my recent blood pressure readings?", "user_type": "PATIENT"}'
+# Clone repository
+git clone https://github.com/yourusername/pharma_no_harma.git
+cd pharma_no_harma
 
-# Neo4j-enhanced query
-curl -X POST "http://localhost:8000/api/v1/bedrock/query-with-neo4j" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Show me patients with diabetes and their medications", "user_type": "DOCTOR"}'
+# Install dependencies
+pip install -r requirements.txt
 
-# Health check
-curl http://localhost:8000/api/v1/bedrock/health
+# Set up environment
+cp env.example .env
+# Edit .env with your configuration
+
+# Initialize database
+python init_db.py
+
+# Start backend API
+python run.py
+
+# Start Streamlit UI (in another terminal)
+streamlit run streamlit_app.py
 ```
 
-For detailed Bedrock integration documentation, see [AWS_BEDROCK_INTEGRATION.md](AWS_BEDROCK_INTEGRATION.md).
-
-## API Documentation
-
-Once the application is running, you can access:
-
-- **Interactive API Docs**: http://localhost:8000/docs
-- **ReDoc Documentation**: http://localhost:8000/redoc
-- **OpenAPI Schema**: http://localhost:8000/openapi.json
-
-## Core Endpoints
-
-### Health Records
-- `GET /api/v1/health-records` - List all health records
-- `POST /api/v1/health-records` - Create new health record
-- `GET /api/v1/health-records/{record_id}` - Get specific record
-- `PUT /api/v1/health-records/{record_id}` - Update record
-- `DELETE /api/v1/health-records/{record_id}` - Delete record
-
-### AI Services
-- `POST /api/v1/bedrock/query` - Process query with Bedrock
-- `POST /api/v1/bedrock/query-with-neo4j` - Neo4j-enhanced query
-- `POST /api/v1/bedrock/summary` - Generate AI summaries
-- `POST /api/v1/bedrock/generate-cypher` - Generate Cypher queries
-
-### Document Processing
-- `POST /api/v1/documents/upload` - Upload and process documents
-- `POST /api/v1/documents/summarize` - Generate document summaries
-- `GET /api/v1/documents/{document_id}` - Get document details
-
-### Export
-- `POST /api/v1/export/pdf` - Generate PDF reports
-- `GET /api/v1/export/health-records` - Export health records
-
-## Configuration
-
-### Environment Variables
-
-Key configuration options in `.env`:
-
+#### Environment Configuration
 ```env
 # Neo4j Configuration
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=password
 
-# AWS Bedrock Configuration
+# AWS Bedrock
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
 
-# AI Services
-OPENAI_API_KEY=your_openai_key  # Optional fallback
-LLAMA_CLOUD_API_KEY=your_llama_key  # For document parsing
+# Translation Services
+SARVAM_API_KEY=your_sarvam_key
 
 # Background Tasks
 CELERY_BROKER_URL=redis://localhost:6379
 ```
 
-### Available Bedrock Models
+</details>
 
-| Model ID | Description | Use Case | On-Demand Support |
-|----------|-------------|----------|-------------------|
-| `anthropic.claude-3-sonnet-20240229-v1:0` | Claude 3 Sonnet | General queries, balanced performance | ✅ Yes |
-| `anthropic.claude-3-haiku-20240307-v1:0` | Claude 3 Haiku | Fast responses, simple queries | ✅ Yes |
-| `anthropic.claude-3-opus-20240229-v1:0` | Claude 3 Opus | Complex reasoning, detailed analysis | ✅ Yes |
-| `amazon.titan-text-express-v1` | Amazon Titan | Cost-effective, good performance | ✅ Yes |
-| `meta.llama2-13b-chat-v1` | Llama 2 13B | Open source alternative | ✅ Yes |
-| `amazon.nova-pro-v1:0` | Amazon Nova Pro | Advanced reasoning | ❌ Requires inference profile |
+---
 
-## Troubleshooting
+## 🎮 Demo & Usage
 
-### Bedrock Model Configuration Issues
+### 💬 AI Chat Examples
 
-If you encounter errors like:
+**Patient Query**: "What's my latest prescription?"
+**AI Response**: Provides medication details, dosage, and instructions in the patient's preferred language.
+
+**Patient Query**: "Explain my blood test results"
+**AI Response**: Breaks down complex lab values into understandable explanations.
+
+### 🌐 Language Translation
+
+**Original (English)**: "Take 500mg of Metformin twice daily with meals for diabetes management."
+**Hindi Translation**: "मधुमेह प्रबंधन के लिए भोजन के साथ दिन में दो बार 500mg मेटफॉर्मिन लें।"
+
+### 📄 Document Processing
+
+Upload a prescription → Get instant summary → View in your language → Chat about medications
+
+---
+
+## 🏗️ Architecture
+
+### Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **AI Engine** | AWS Bedrock (Claude, Titan) | Medical text analysis and chat |
+| **Knowledge Graph** | Neo4j | Complex medical relationships |
+| **Translation** | Sarvam AI | Indian language translation |
+| **Backend API** | FastAPI | High-performance REST API |
+| **Frontend** | Streamlit | Interactive web interface |
+| **Task Queue** | Celery + Redis | Background processing |
+| **Document Parsing** | LlamaParse | Medical document extraction |
+
+### System Flow
+```mermaid
+graph TD
+    A[Patient Uploads Document] --> B[AI Document Analysis]
+    B --> C[Generate Summaries]
+    C --> D[Translate to Preferred Language]
+    D --> E[Store in Knowledge Graph]
+    E --> F[Available for Chat Queries]
+    F --> G[AI Assistant Responses]
 ```
-ValidationException: Model amazon.nova-pro-v1:0 does not support on-demand throughput. 
-Please use an inference profile for this model.
-```
 
-**Solution**: Use a model that supports on-demand usage or configure an inference profile.
+---
 
-**Quick Fix**:
-```bash
-# Run the model configuration fixer
-python fix_bedrock_model.py
+## 📊 Impact & Benefits
 
-# Or manually update your .env file
-BEDROCK_MODEL_ID=anthropic.claude-3-sonnet-20240229-v1:0
-```
+### For Patients
+- ✅ **Better Understanding**: Medical information in native language
+- ✅ **Improved Compliance**: Clear medication instructions
+- ✅ **Empowered Decisions**: Easy access to health data
+- ✅ **Reduced Anxiety**: AI assistant for immediate questions
 
-**Why this happens**: Some Bedrock models (like Nova Pro) require inference profile configuration and cannot be used with on-demand throughput. This is common in development environments where inference profiles aren't set up.
+### For Healthcare Providers
+- ✅ **Better Communication**: Patients understand treatment plans
+- ✅ **Reduced Miscommunication**: Clear, translated summaries
+- ✅ **Time Savings**: AI handles routine information queries
+- ✅ **Improved Outcomes**: Better patient compliance
 
-**For Production**: If you need to use Nova Pro models, configure an inference profile in the AWS Bedrock console.
+### For the Healthcare System
+- ✅ **Accessibility**: Healthcare information for all language speakers
+- ✅ **Efficiency**: Automated summary generation
+- ✅ **Quality**: Consistent, accurate medical communication
+- ✅ **Scalability**: AI-powered solution for millions of patients
 
-## Development
+---
 
-### Project Structure
+## 🗂️ Project Structure
 
 ```
 pharma_no_harma/
-├── app/
-│   ├── api/
-│   │   ├── endpoints/
-│   │   │   ├── health_records.py
-│   │   │   ├── bedrock.py
-│   │   │   ├── documents.py
-│   │   │   └── export.py
-│   │   └── main.py
-│   ├── core/
-│   │   ├── config.py
-│   │   └── database.py
-│   ├── models/
-│   │   ├── schemas.py
-│   │   └── database.py
-│   ├── services/
-│   │   ├── bedrock_service.py
-│   │   ├── bedrock_neo4j_service.py
-│   │   ├── document_service.py
-│   │   └── export_service.py
-│   └── utils/
-├── tests/
-├── requirements.txt
-├── run.py
-└── setup_bedrock.py
+├── 🎨 Frontend
+│   ├── streamlit_app.py          # Main web interface
+│   └── streamlit_chat_interface.py # Chat interface
+├── 🔧 Backend API
+│   ├── app/
+│   │   ├── api/endpoints/        # API endpoints
+│   │   ├── services/            # Business logic
+│   │   ├── models/              # Data models
+│   │   └── core/                # Configuration
+├── 📚 Documentation
+│   └── guides/                  # Detailed guides
+├── 🚀 Deployment
+│   ├── requirements.txt         # Dependencies
+│   ├── run.py                   # Application runner
+│   └── Dockerfile              # Container setup
+└── 🌐 GitHub Pages
+    └── index.html               # Landing page
 ```
 
-### Running Tests
+---
 
-```bash
-# Install test dependencies
-pip install -r requirements-dev.txt
+## 🎯 Supported Languages
 
-# Run tests
-pytest
+| Language | Code | Native Name | Status |
+|----------|------|-------------|--------|
+| Bengali | bn-IN | বাংলা | ✅ |
+| English | en-IN | English | ✅ |
+| Gujarati | gu-IN | ગુજરાતી | ✅ |
+| Hindi | hi-IN | हिन्दी | ✅ |
+| Kannada | kn-IN | ಕನ್ನಡ | ✅ |
+| Malayalam | ml-IN | മലയാളം | ✅ |
+| Marathi | mr-IN | मराठी | ✅ |
+| Odia | od-IN | ଓଡ଼ିଆ | ✅ |
+| Punjabi | pa-IN | ਪੰਜਾਬੀ | ✅ |
+| Tamil | ta-IN | தமிழ் | ✅ |
+| Telugu | te-IN | తెలుగు | ✅ |
 
-# Run with coverage
-pytest --cov=app
-```
+---
 
-### Code Quality
+## 📚 Documentation
 
-```bash
-# Format code
-black app/
+- **[🚀 Quick Start Guide](guides/QUICK_START_AGENTIC.md)** - Get started in 5 minutes
+- **[🤖 AI Architecture](guides/AGENTIC_ARCHITECTURE.md)** - Understanding the AI system
+- **[💬 Chat Interface](guides/CHAT_INTERFACE_GUIDE.md)** - Using the AI assistant
+- **[🌐 Translation Guide](guides/TRANSLATION_INTEGRATION.md)** - Multi-language features
+- **[☁️ AWS Bedrock Setup](guides/AWS_BEDROCK_INTEGRATION.md)** - AI configuration
+- **[📊 Knowledge Graph](guides/neo4j_kg_schema.md)** - Understanding data relationships
 
-# Lint code
-flake8 app/
+---
 
-# Type checking
-mypy app/
-```
+## 🤝 Contributing
 
-## Deployment
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
-### Docker
+### Ways to Contribute
+- 🐛 Report bugs and issues
+- 💡 Suggest new features
+- 🔧 Submit code improvements
+- 📚 Improve documentation
+- 🌐 Add language support
+- 🧪 Write tests
 
-```bash
-# Build image
-docker build -t health-records-api .
-
-# Run container
-docker run -p 8000:8000 health-records-api
-```
-
-### Production Considerations
-
-1. **Environment Variables**: Use proper secrets management
-2. **Database**: Use production Neo4j instance
-3. **Redis**: Use production Redis instance
-4. **AWS**: Configure proper IAM roles and permissions
-5. **Monitoring**: Set up logging and monitoring
-6. **Security**: Enable HTTPS, authentication, rate limiting
-
-## Contributing
-
+### Development Workflow
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Add tests
-5. Submit a pull request
+4. Add tests if applicable
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
-## License
+---
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+---
 
-For support and questions:
-1. Check the documentation
-2. Review the API docs at `/docs`
-3. Check the logs for error details
-4. Open an issue on GitHub
+## 🆘 Support & Community
 
-## Roadmap
+- **📧 Email**: support@pharmanoharma.com
+- **💬 GitHub Discussions**: [Community Forum](https://github.com/yourusername/pharma_no_harma/discussions)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/yourusername/pharma_no_harma/issues)
+- **📖 Documentation**: [GitHub Wiki](https://github.com/yourusername/pharma_no_harma/wiki)
 
-- [ ] Real-time notifications
-- [ ] Advanced analytics dashboard
-- [ ] Multi-tenant support
-- [ ] Mobile app integration
-- [ ] Advanced AI features
-- [ ] Performance optimizations 
+---
+
+## 🙏 Acknowledgments
+
+- **AWS Bedrock** for providing advanced AI capabilities
+- **Sarvam AI** for Indian language translation services
+- **Neo4j** for graph database technology
+- **FastAPI & Streamlit** for modern development frameworks
+- **Open Source Community** for inspiration and support
+
+---
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/pharma_no_harma&type=Date)](https://star-history.com/#yourusername/pharma_no_harma&Date)
+
+---
+
+<div align="center">
+
+**🏥 Making Healthcare Accessible for Everyone 🏥**
+
+Built with ❤️ for breaking language barriers in healthcare
+
+[🌐 Visit Website](https://yourusername.github.io/pharma_no_harma) • [📖 Documentation](guides/) • [🚀 Get Started](#-quick-start)
+
+</div> 

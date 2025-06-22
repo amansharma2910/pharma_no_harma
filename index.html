@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaNoHarma - AI Health Assistant for Elderly Care</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1f77b4, #2c3e50);
+            color: white;
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #3498db;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1f77b4, #2c3e50);
+            color: white;
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #e74c3c;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: all 0.3s;
+            animation: fadeInUp 1s ease-out 0.6s both;
+        }
+
+        .cta-button:hover {
+            background: #c0392b;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(231, 76, 60, 0.3);
+        }
+
+        /* Problem Statement */
+        .problem-section {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .problem-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .problem-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .problem-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 80px 0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #3498db;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #3498db;
+            margin-bottom: 1rem;
+        }
+
+        /* Technology Stack */
+        .tech-section {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .tech-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Demo Section */
+        .demo-section {
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .demo-video {
+            max-width: 800px;
+            margin: 2rem auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Footer */
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #3498db;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .problem-grid,
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin: 3rem 0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">🏥 PharmaNoHarma</div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#technology">Technology</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><a href="https://github.com/yourusername/pharma_no_harma">GitHub</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>👴🏥 PharmaNoHarma</h1>
+            <p>Empowering Elderly Adults to Understand and Manage Their Health with AI-Powered Medical Assistance</p>
+            <a href="#demo" class="cta-button">See How It Helps</a>
+        </div>
+    </section>
+
+    <!-- Problem Statement -->
+    <section class="problem-section">
+        <div class="container">
+            <h2 class="section-title">Health Challenges Facing Our Elderly</h2>
+            <p class="section-subtitle">Elderly adults often struggle to navigate complex healthcare information,
+                manage multiple medications, and understand their changing health needs</p>
+
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">💊</div>
+                    <h3>Medication Management</h3>
+                    <p>Elderly patients often take multiple medications with complex schedules, drug interactions,
+                        and side effects that are difficult to track and understand.</p>
+                </div>
+
+                <div class="problem-card">
+                    <div class="problem-icon">📋</div>
+                    <h3>Complex Medical Information</h3>
+                    <p>Doctor reports, lab results, and medical terminology can be overwhelming for elderly patients,
+                        making it hard to understand their health conditions.</p>
+                </div>
+
+                <div class="problem-card">
+                    <div class="problem-icon">👥</div>
+                    <h3>Caregiver Communication</h3>
+                    <p>Family caregivers often struggle to help elderly relatives understand their health records
+                        and coordinate care across multiple specialists.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="container">
+            <h2 class="section-title">Your Personal Health Companion</h2>
+            <p class="section-subtitle">Simple, conversational AI that helps elderly adults understand their health,
+                manage medications, and stay informed about their medical care</p>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">👩‍⚕️</div>
+                    <h3>Friendly AI Health Assistant</h3>
+                    <p>Ask questions about your health records, medications, or symptoms in simple conversation.
+                        Get easy-to-understand answers that help you make informed decisions about your care.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">💊</div>
+                    <h3>Medication Tracker & Guide</h3>
+                    <p>Keep track of all your medicines, understand what each one does, learn about side effects,
+                        and get reminders - all explained in simple terms you can understand.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📖</div>
+                    <h3>Health Records Made Simple</h3>
+                    <p>Transform complex doctor reports and lab results into clear, easy-to-read summaries.
+                        Understand what your test results mean and what steps to take next.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Your Language, Your Comfort</h3>
+                    <p>Get all health information in your preferred language - Hindi, Tamil, Telugu, Bengali, and more.
+                        No need to struggle with English medical terms.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">👪</div>
+                    <h3>Family-Friendly Sharing</h3>
+                    <p>Easily share health updates with family members and caregivers. Help your loved ones
+                        understand your health status and coordinate your care.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Safe & Secure</h3>
+                    <p>Your health information is protected with the highest security standards. Only you and
+                        those you choose can access your medical records.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Stack -->
+    <section class="tech-section" id="technology">
+        <div class="container">
+            <h2 class="section-title">Simple Technology, Powerful Results</h2>
+            <p class="section-subtitle">Advanced AI technology made simple and accessible for elderly users</p>
+
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>🧠 Smart Health AI</h4>
+                    <p>Understands medical language and explains it simply</p>
+                </div>
+                <div class="tech-card">
+                    <h4>🔗 Connected Health Data</h4>
+                    <p>Links all your health information for complete picture</p>
+                </div>
+                <div class="tech-card">
+                    <h4>⚡ Fast & Reliable</h4>
+                    <p>Quick responses when you need health answers</p>
+                </div>
+                <div class="tech-card">
+                    <h4>📱 Easy-to-Use Interface</h4>
+                    <p>Simple design that's comfortable for all ages</p>
+                </div>
+                <div class="tech-card">
+                    <h4>🗣️ Natural Language</h4>
+                    <p>Talk naturally in your preferred language</p>
+                </div>
+                <div class="tech-card">
+                    <h4>⏰ Always Available</h4>
+                    <p>Get health guidance 24/7 when you need it</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="demo-section" id="demo">
+        <div class="container">
+            <h2 class="section-title">How PharmaNoHarma Helps Elderly Adults</h2>
+            <p class="section-subtitle">Real examples of how our AI assistant makes healthcare simpler for seniors</p>
+
+            <!-- Placeholder for demo content -->
+            <div class="demo-video">
+                <div style="background: #f8f9fa; padding: 3rem; text-align: center; color: #7f8c8d;">
+                    <h3>👴📱 Real-Life Scenarios</h3>
+                    <p>See how PharmaNoHarma helps elderly adults navigate their healthcare journey</p>
+                    <br>
+                    <p><strong>Common Use Cases:</strong></p>
+                    <ul style="text-align: left; max-width: 500px; margin: 1rem auto;">
+                        <li><strong>Medication Questions:</strong> "What does my blood pressure medicine do?"</li>
+                        <li><strong>Lab Results:</strong> "What do my cholesterol numbers mean?"</li>
+                        <li><strong>Symptom Guidance:</strong> "Should I be worried about this side effect?"</li>
+                        <li><strong>Family Sharing:</strong> "How do I share my health report with my daughter?"</li>
+                        <li><strong>Language Support:</strong> "Explain my diabetes in Hindi"</li>
+                        <li><strong>Care Coordination:</strong> "What should I ask my doctor next visit?"</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Health Support</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">Simple</div>
+                    <div class="stat-label">Conversations</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">Trusted</div>
+                    <div class="stat-label">Health Partner</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-links">
+                <a href="https://github.com/yourusername/pharma_no_harma">GitHub Repository</a>
+                <a href="https://github.com/yourusername/pharma_no_harma/blob/main/README.md">Documentation</a>
+                <a href="https://github.com/yourusername/pharma_no_harma/issues">Report Issues</a>
+                <a href="https://github.com/yourusername/pharma_no_harma/blob/main/guides/">Developer Guides</a>
+            </div>
+            <p>&copy; 2024 PharmaNoHarma. Empowering elderly adults to understand and manage their health. 👴👵❤️</p>
+            <p style="margin-top: 1rem; opacity: 0.8; font-size: 0.9rem;">
+                Built with ❤️ to help seniors navigate their healthcare journey with confidence
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll effect to header
+        window.addEventListener('scroll', function () {
+            const header = document.querySelector('header');
+            if (window.scrollY > 100) {
+                header.style.background = 'rgba(31, 119, 180, 0.95)';
+                header.style.backdropFilter = 'blur(10px)';
+            } else {
+                header.style.background = 'linear-gradient(135deg, #1f77b4, #2c3e50)';
+                header.style.backdropFilter = 'none';
+            }
+        });
+    </script>
+</body>
+
+</html>

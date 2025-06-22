@@ -1,0 +1,68 @@
+# GitHub Pages Configuration for PharmaNoHarma
+title: "PharmaNoHarma"
+description: "AI Health Assistant for Elderly Care - Empowering Seniors to Understand and Manage Their Health Records, Medications, and Medical Information"
+url: "https://amansharma2910.github.io"
+baseurl: "/pharma_no_harma"
+
+# Theme
+theme: minima
+
+# Enable plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Site settings
+author: "PharmaNoHarma Team"
+email: "your-email@example.com"
+twitter_username: ""
+github_username: "yourusername"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/
+  - venv/
+  - __pycache__/
+  - "*.pyc"
+  - .env
+  - .env.example
+
+# Include files
+include:
+  - _pages
+
+# Collections
+collections:
+  guides:
+    output: true
+    permalink: /:collection/:name/
+
+# Default front matter
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+      author: "PharmaNoHarma Team"
+  - scope:
+      path: ""
+      type: "guides"
+    values:
+      layout: "page"
+
+# SEO and social
+social:
+  name: "PharmaNoHarma"
+  links:
+    - "https://github.com/yourusername/pharma_no_harma"
+
+# Analytics (optional)
+# google_analytics: "your-analytics-id" 
